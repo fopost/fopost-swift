@@ -53,7 +53,7 @@ try await client.posts.publish(post.id)
 ```
 
 Get a key from **Settings → API Keys** in the FoPost dashboard
-(<https://app.fopost.com/settings/api-keys>). It travels as the `X-API-Key`
+(<https://fopost.com/dashboard/settings/api-keys>). It travels as the `X-API-Key`
 header, never as a bearer token.
 
 ## Content

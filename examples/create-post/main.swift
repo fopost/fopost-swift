@@ -26,14 +26,14 @@ struct CreatePostExample {
     let client = try FoPostClient()
 
     guard let workspace = try await client.workspaces.list().first else {
-      print("No workspaces yet — create one at https://app.fopost.com first.")
+      print("No workspaces yet — create one at https://fopost.com/dashboard first.")
       return
     }
     print("Workspace: \(workspace.name ?? workspace.id)")
 
     let accounts = try await client.accounts.list(workspaceID: workspace.id)
     guard !accounts.isEmpty else {
-      print("No connected accounts yet — connect one at https://app.fopost.com first.")
+      print("No connected accounts yet — connect one at https://fopost.com/dashboard first.")
       return
     }
     for account in accounts {

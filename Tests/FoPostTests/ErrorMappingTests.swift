@@ -32,10 +32,10 @@ final class ErrorMappingTests: XCTestCase {
     let mapped = error(
       status: 402,
       body:
-        #"{"error":"subscription_required","message":"Upgrade to publish","upgrade_url":"https://app.fopost.com/settings/billing"}"#
+        #"{"error":"subscription_required","message":"Upgrade to publish","upgrade_url":"https://fopost.com/dashboard/settings/billing"}"#
     )
     XCTAssertEqual(
-      mapped.upgradeURL, URL(string: "https://app.fopost.com/settings/billing"))
+      mapped.upgradeURL, URL(string: "https://fopost.com/dashboard/settings/billing"))
     XCTAssertEqual(mapped.code, "subscription_required")
   }
 
