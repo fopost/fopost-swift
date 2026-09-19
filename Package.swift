@@ -4,7 +4,7 @@ import PackageDescription
 
 // FoPost — the official Swift SDK for the FoPost API.
 //
-//   Version:    0.2.0
+//   Version:    0.3.0
 //   Homepage:   https://fopost.com
 //   Docs:       https://fopost.com/docs
 //   Repository: https://github.com/fopost/fopost-swift
