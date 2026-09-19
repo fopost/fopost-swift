@@ -128,4 +128,30 @@ public struct AccountsResource: Resource {
     try await httpDelete(
       "/accounts/\(escapePath(id))/telegram/commands", as: TelegramBotCommands.self)
   }
+
+  /// Channels the Slack app can post to: every public channel, and private
+  /// ones the app was invited to. A 409 `webhook_connection` means the account
+  /// posts through a webhook.
+  public func slackChannels(_ id: String) async throws -> [SlackChannel] {
+    try await httpGet("/accounts/\(escapePath(id))/slack/channels", as: [SlackChannel].self)
+  }
+
+  /// People in the connected Slack workspace, for addressing a DM.
+  public func slackMembers(_ id: String) async throws -> [SlackMember] {
+    try await httpGet("/accounts/\(escapePath(id))/slack/members", as: [SlackMember].self)
+  }
+
+  /// The name and icon a Slack account posts under.
+  public func slackIdentity(_ id: String) async throws -> SlackIdentity {
+    try await httpGet("/accounts/\(escapePath(id))/slack/identity", as: SlackIdentity.self)
+  }
+
+  /// Sets the name and icon a Slack account posts under. Setting one icon
+  /// clears the other.
+  public func updateSlackIdentity(_ id: String, _ body: UpdateSlackIdentityRequest) async throws
+    -> SlackIdentity
+  {
+    try await httpPatch(
+      "/accounts/\(escapePath(id))/slack/identity", body: body, as: SlackIdentity.self)
+  }
 }
