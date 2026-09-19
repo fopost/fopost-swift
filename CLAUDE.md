@@ -43,8 +43,15 @@ Sources/FoPost/
 
 A call flows `client.posts.create(_:)` → `Resource.httpPost` → `Transport.send`
 → `URLSession` → `Transport.decode`. The `Resource` protocol extension owns the
-`httpGet`/`httpPost`/`httpPut`/`httpDelete`/`httpUpload` helpers — they are
-prefixed so a resource can define its own `get`/`delete` without shadowing them.
+`httpGet`/`httpPost`/`httpPut`/`httpPatch`/`httpDelete`/`httpUpload` helpers —
+they are prefixed so a resource can define its own `get`/`delete` without
+shadowing them.
+
+Coverage: posts, workspaces, accounts, communities, labels, webhooks,
+analytics, automations, media, inbox, and ads. Inbox skips `/inbox/chat/*`
+(browser-encrypted X Chat) and the binary `/inbox/{id}/attachments/{index}`
+stream. Ads doc comments name the four spending calls (`boost`, `create`,
+`setStatus`, `delete`) that need the `publish` scope on top of `ads`.
 
 Design notes worth keeping:
 
@@ -56,7 +63,8 @@ Design notes worth keeping:
   Swift `enum`.
 - **The `{"data": ...}` envelope is peeled tolerantly.** `EnvelopeProbe` checks
   for the key and only unwraps when it is there, because a few endpoints answer
-  bare. List endpoints that carry `meta` decode as `Page<T>` with `unwrap: false`.
+  bare. List endpoints that carry `meta` decode as `Page<T>` with `unwrap: false`;
+  inbox lists carry a camelCase `meta` and decode as `InboxPage<T>`.
 - **Model fields are `Optional`** almost everywhere. The API omits what it has
   not computed; a non-optional field is a decode failure waiting to happen.
 - **Timestamps** parse ISO 8601 with and without fractional seconds plus a
