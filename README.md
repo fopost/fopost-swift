@@ -131,6 +131,7 @@ let post = try await client.posts.create(
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply, hide, delete, reply approvals |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, audiences, targeting search, lead forms and leads |
+| `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
@@ -166,6 +167,23 @@ let ad = try await client.ads.boost(
         budget: AdBudget(minor: 2000, type: .daily),
         targeting: AdTargeting(countries: ["US", "CA"], ageMin: 21, ageMax: 45)))
 _ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
+```
+
+## Validation
+
+`client.validate` checks content before a post exists. Nothing is stored:
+
+```swift
+let result = try await client.validate.post(
+    ValidatePostRequest(content: "Ship day", platforms: [.twitter, .linkedin]))
+for platform in result.platforms ?? [] where platform.ready != true {
+    print(platform.platform ?? "", platform.issues ?? [])
+}
+
+let length = try await client.validate.length(
+    ValidateLengthRequest(text: "Ship day", platforms: [.twitter]))
+let media = try await client.validate.media(
+    ValidateMediaRequest(url: "https://yourbrand.com/chart.png"))
 ```
 
 ## Error handling
