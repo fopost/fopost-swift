@@ -39,8 +39,49 @@ public struct MediaResource: Resource {
     return first
   }
 
+  /// Reserves a presigned slot for a direct upload of `size` bytes, at most
+  /// 50 MB. The bytes then go straight to `uploadUrl` with `headers`.
+  public func presign(workspaceID: String, filename: String, mimeType: String, size: Int)
+    async throws -> PresignedUpload
+  {
+    try await httpPost(
+      "/media/presign",
+      body: PresignRequest(
+        workspaceId: workspaceID, filename: filename, mimeType: mimeType, size: size),
+      as: PresignedUpload.self)
+  }
+
+  /// Turns a finished direct upload into a library item.
+  public func complete(uploadID: String) async throws -> UploadedMedia {
+    try await httpPost(
+      "/media/presign/\(escapePath(uploadID))/complete", as: UploadedMedia.self)
+  }
+
+  /// Presigns, PUTs the bytes to the returned URL, and completes the upload.
+  public func uploadDirect(workspaceID: String, filename: String, mimeType: String, data: Data)
+    async throws -> UploadedMedia
+  {
+    let presigned = try await presign(
+      workspaceID: workspaceID, filename: filename, mimeType: mimeType, size: data.count)
+    guard let url = URL(string: presigned.uploadUrl) else {
+      throw FoPostError.decoding(
+        message: "The presigned upload URL is not a valid URL.", body: Data())
+    }
+    try await transport.putRaw(
+      to: url, method: presigned.method ?? "PUT", headers: presigned.headers ?? [:],
+      body: data)
+    return try await complete(uploadID: presigned.uploadId)
+  }
+
   /// Removes an asset from the library.
   public func delete(_ id: String) async throws {
     try await httpDelete("/media/\(escapePath(id))")
   }
+}
+
+private struct PresignRequest: Encodable, Sendable {
+  let workspaceId: String
+  let filename: String
+  let mimeType: String
+  let size: Int
 }
