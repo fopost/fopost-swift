@@ -41,6 +41,31 @@ final class Transport: @unchecked Sendable {
     _ = try await perform(request)
   }
 
+  /// Sends bytes to a URL outside the API, unsigned and unretried, as a
+  /// presigned upload needs.
+  func putRaw(to url: URL, method: String, headers: [String: String], body: Data) async throws
+  {
+    var urlRequest = URLRequest(url: url, timeoutInterval: configuration.timeout)
+    urlRequest.httpMethod = method
+    urlRequest.httpBody = body
+    for (name, value) in headers {
+      urlRequest.setValue(value, forHTTPHeaderField: name)
+    }
+    urlRequest.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
+    do {
+      let (data, response) = try await session.data(for: urlRequest)
+      guard let http = response as? HTTPURLResponse else {
+        throw FoPostError.decoding(message: "The response was not an HTTP response.", body: data)
+      }
+      guard (200...299).contains(http.statusCode) else {
+        throw Transport.error(from: http, body: data)
+      }
+    } catch let error as URLError {
+      if error.code == .cancelled { throw CancellationError() }
+      throw FoPostError.transport(error)
+    }
+  }
+
   // MARK: - Sending
 
   private func perform(_ request: HTTPRequest) async throws -> (Data, HTTPURLResponse) {

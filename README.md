@@ -84,6 +84,17 @@ let uploaded = try await client.media.upload(
 let content = [ContentBlock(text: "Numbers are in", media: [uploaded.asMediaItem()])]
 ```
 
+A direct upload sends the bytes to storage instead of through the API:
+`uploadDirect` presigns, PUTs the file, and completes it in one call, and
+`presign` plus `complete(uploadID:)` are there when you want to PUT the bytes
+yourself.
+
+```swift
+let uploaded = try await client.media.uploadDirect(
+    workspaceID: workspace.id, filename: "chart.png", mimeType: "image/png",
+    data: try Data(contentsOf: URL(fileURLWithPath: "chart.png")))
+```
+
 ## Scheduling and publishing
 
 `status` is `.draft` or `.scheduled`; a scheduled post needs `scheduleAt`. To
@@ -117,7 +128,7 @@ let post = try await client.posts.create(
 | `client.webhooks` | Outbound event subscriptions |
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection |
 | `client.automations` | Automations, runs, stats, manual triggers |
-| `client.media` | The media library and uploads |
+| `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply, hide, delete, reply approvals |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, audiences, targeting search, lead forms and leads |
 

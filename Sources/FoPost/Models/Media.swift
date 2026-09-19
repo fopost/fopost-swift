@@ -49,3 +49,15 @@ public struct UploadFile: Sendable, Hashable {
       name: url.lastPathComponent, data: try Data(contentsOf: url), mimeType: mimeType)
   }
 }
+
+/// A presigned slot for a direct upload: where to PUT the bytes, with which
+/// headers, and until when.
+public struct PresignedUpload: Codable, Sendable, Hashable {
+  public let uploadId: String
+  public let uploadUrl: String
+  /// Always `PUT`.
+  public let method: String?
+  /// Sent verbatim on the PUT.
+  public let headers: [String: String]?
+  public let expiresAt: Date?
+}
