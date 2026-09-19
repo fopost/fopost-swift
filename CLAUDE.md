@@ -50,8 +50,9 @@ shadowing them.
 Coverage: posts, workspaces, accounts, communities, labels, webhooks,
 analytics, automations, media, inbox, and ads. Inbox skips `/inbox/chat/*`
 (browser-encrypted X Chat) and the binary `/inbox/{id}/attachments/{index}`
-stream. Ads doc comments name the four spending calls (`boost`, `create`,
-`setStatus`, `delete`) that need the `publish` scope on top of `ads`.
+stream. Ads doc comments name the spending calls (`boost`, `create`,
+`setStatus`, `delete`, `bulkSetStatus`, and the campaign, ad set, and network ad
+writes) that need the `publish` scope on top of `ads`.
 
 Design notes worth keeping:
 
