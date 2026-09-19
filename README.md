@@ -131,7 +131,7 @@ let post = try await client.posts.create(
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
-| `client.ads` | Boosts, ads, Meta Ads connections, sources, audiences, targeting search, lead forms and leads |
+| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
@@ -153,9 +153,10 @@ Every inbox call needs an API key with the `inbox` scope, every ads call the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
 `setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
-reply, also need `publish`. The four ads calls that spend money, `boost`, `create`,
-`setStatus`, and `delete`, also need `publish`. A boost or ad starts paused
-unless `paused` is `false`.
+reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
+`setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
+duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
+created starts paused unless `paused` is `false`.
 
 ```swift
 let unread = try await client.inbox.list(
