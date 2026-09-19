@@ -165,8 +165,24 @@ public struct InboxItem: Codable, Sendable, Hashable {
   /// False on platforms whose API reads but cannot answer.
   public let canReply: Bool?
   public let hidden: Bool?
+  public let liked: Bool?
+  public let pinned: Bool?
+  /// Our reaction on a DM.
+  public let reaction: String?
+  public let editedAt: Date?
   public let canHide: Bool?
+  /// A comment someone left, or our own reply.
   public let canDelete: Bool?
+  public let canLike: Bool?
+  /// Our own comment only.
+  public let canPin: Bool?
+  /// Our own comment only.
+  public let canEdit: Bool?
+  public let canReact: Bool?
+  public let canSendMedia: Bool?
+  public let canQuickReply: Bool?
+  /// A DM can be opened from this comment with ``InboxResource/startConversation(_:)``.
+  public let canPrivateReply: Bool?
   /// The FoPost post this item was left under, when we published it.
   public let post: [String: JSONValue]?
   public let postContext: InboxPostContext?
@@ -221,6 +237,8 @@ public struct InboxAccount: Codable, Sendable, Hashable {
   public let pendingReason: String?
   public let dmSupported: Bool?
   public let dmPendingReason: String?
+  /// A new DM can be opened from this account by handle.
+  public let canStartConversation: Bool?
 }
 
 /// What one platform's inbox can do today.
@@ -276,12 +294,24 @@ public struct InboxReplyResult: Codable, Sendable, Hashable {
   public let reply: InboxReplyRef?
 }
 
+/// The DM ``InboxResource/startConversation(_:)`` opened, and the message sent.
+public struct InboxConversationStart: Codable, Sendable, Hashable {
+  public let conversationId: String?
+  public let item: InboxItem?
+}
+
+/// Whether the typing indicator is showing after
+/// ``InboxResource/setTyping(conversationID:accountID:on:)``.
+public struct InboxTypingResult: Codable, Sendable, Hashable {
+  public let typing: Bool?
+}
+
 /// How many items ``InboxResource/markThreadRead(_:)`` settled.
 public struct InboxReadResult: Codable, Sendable, Hashable {
   public let updated: Int?
 }
 
-/// Whether ``InboxResource/delete(_:)`` removed the comment on the platform.
+/// Whether ``InboxResource/delete(_:)`` removed the comment or our reply on the platform.
 public struct InboxDeleteResult: Codable, Sendable, Hashable {
   public let deleted: Bool?
 }
@@ -480,8 +510,73 @@ struct RefreshInboxRequest: Codable, Sendable {
   }
 }
 
+/// The body of ``InboxResource/startConversation(_:)``. Name either
+/// `accountID` and `handle`, or `commentID` for a private reply to a comment.
+public struct StartInboxConversationRequest: Codable, Sendable {
+  /// The account to send from, with `handle`.
+  public var accountID: String?
+  /// Who to message.
+  public var handle: String?
+  /// An inbox comment to answer privately instead. Only where `canPrivateReply` is true.
+  public var commentID: String?
+  public var text: String
+  /// Media library ids to attach, at most 10.
+  public var mediaIDs: [String]?
+
+  public init(
+    accountID: String? = nil, handle: String? = nil, commentID: String? = nil, text: String,
+    mediaIDs: [String]? = nil
+  ) {
+    self.accountID = accountID
+    self.handle = handle
+    self.commentID = commentID
+    self.text = text
+    self.mediaIDs = mediaIDs
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case accountID = "account_id"
+    case handle
+    case commentID = "comment_id"
+    case text
+    case mediaIDs = "media_ids"
+  }
+}
+
 struct InboxReplyRequest: Codable, Sendable {
+  var text: String?
+  var mediaIDs: [String]?
+  var quickReplies: [String]?
+
+  enum CodingKeys: String, CodingKey {
+    case text
+    case mediaIDs = "media_ids"
+    case quickReplies = "quick_replies"
+  }
+}
+
+struct EditInboxCommentRequest: Codable, Sendable {
   var text: String
+}
+
+struct ReactInboxItemRequest: Codable, Sendable {
+  var reaction: String?
+
+  // Nil is sent as null, which removes our reaction.
+  func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(reaction, forKey: .reaction)
+  }
+}
+
+struct InboxTypingRequest: Codable, Sendable {
+  var accountID: String
+  var on: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case accountID = "account_id"
+    case on
+  }
 }
 
 struct DecideInboxReplyRequest: Codable, Sendable {
