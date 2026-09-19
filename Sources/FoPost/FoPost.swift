@@ -1,5 +1,5 @@
 /// The FoPost SDK version, reported in the `User-Agent` header.
-public let fopostVersion = "0.2.0"
+public let fopostVersion = "0.3.0"
 
 /// An empty response body, for endpoints that answer with nothing.
 public struct Empty: Codable, Sendable, Hashable {

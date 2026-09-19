@@ -177,4 +177,134 @@ final class InboxTests: XCTestCase {
     XCTAssertEqual(platforms.first?.comments, .live)
     XCTAssertEqual(platforms.first?.dms, .unavailable)
   }
+  func testItemAndAccountDecodeTheActionFlags() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([
+      .json(
+        #"{"data":{"id":"item_2","type":"dm","liked":true,"pinned":false,"reaction":"❤️","editedAt":"2026-09-19T11:00:00Z","canLike":true,"canPin":false,"canEdit":true,"canReact":true,"canSendMedia":true,"canQuickReply":true,"canPrivateReply":false,"canDelete":true}}"#
+      )
+    ])
+    let item = try await client.inbox.like("item_2")
+    XCTAssertEqual(item.liked, true)
+    XCTAssertEqual(item.pinned, false)
+    XCTAssertEqual(item.reaction, "❤️")
+    XCTAssertEqual(item.editedAt, Timestamps.parse("2026-09-19T11:00:00Z"))
+    XCTAssertEqual(item.canLike, true)
+    XCTAssertEqual(item.canPin, false)
+    XCTAssertEqual(item.canEdit, true)
+    XCTAssertEqual(item.canReact, true)
+    XCTAssertEqual(item.canSendMedia, true)
+    XCTAssertEqual(item.canQuickReply, true)
+    XCTAssertEqual(item.canPrivateReply, false)
+
+    StubURLProtocol.script([
+      .json(#"{"data":[{"id":"acc_1","platform":"x","canStartConversation":true}]}"#)
+    ])
+    let accounts = try await client.inbox.accounts(workspaceID: "ws_1")
+    XCTAssertEqual(accounts.first?.canStartConversation, true)
+  }
+
+  func testLikePinAndReactPostToTheirActions() async throws {
+    let client = try makeStubClient()
+
+    for (action, path) in [
+      ("like", "/v1/inbox/item_1/like"), ("unlike", "/v1/inbox/item_1/unlike"),
+      ("pin", "/v1/inbox/item_1/pin"), ("unpin", "/v1/inbox/item_1/unpin"),
+    ] {
+      StubURLProtocol.script([.json(#"{"data":{"id":"item_1"}}"#)])
+      let item: InboxItem
+      switch action {
+      case "like": item = try await client.inbox.like("item_1")
+      case "unlike": item = try await client.inbox.unlike("item_1")
+      case "pin": item = try await client.inbox.pin("item_1")
+      default: item = try await client.inbox.unpin("item_1")
+      }
+      XCTAssertEqual(item.id, "item_1")
+      let request = try XCTUnwrap(StubURLProtocol.requests.first)
+      XCTAssertEqual(request.method, "POST")
+      XCTAssertEqual(request.path, path)
+    }
+
+    StubURLProtocol.script([.json(#"{"data":{"id":"item_1","reaction":"❤️"}}"#)])
+    _ = try await client.inbox.react("item_1", reaction: "❤️")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/inbox/item_1/react")
+    XCTAssertEqual(try request.bodyJSON()["reaction"] as? String, "❤️")
+
+    StubURLProtocol.script([.json(#"{"data":{"id":"item_1","reaction":null}}"#)])
+    _ = try await client.inbox.react("item_1", reaction: nil)
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    let body = try request.bodyJSON()
+    XCTAssertEqual(body.count, 1)
+    XCTAssertTrue(body["reaction"] is NSNull)
+  }
+
+  func testEditCommentAndMediaReplySendTheirBodies() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([.json(#"{"data":{"id":"item_1","text":"Fixed"}}"#)])
+    let edited = try await client.inbox.editComment("item_1", text: "Fixed")
+    XCTAssertEqual(edited.text, "Fixed")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "PATCH")
+    XCTAssertEqual(request.path, "/v1/inbox/item_1")
+    XCTAssertEqual(try request.bodyJSON() as NSDictionary, ["text": "Fixed"] as NSDictionary)
+
+    StubURLProtocol.script([
+      .json(#"{"data":{"item":{"id":"item_1"},"reply":{"externalId":"r_2"}}}"#)
+    ])
+    let replied = try await client.inbox.reply(
+      "item_1", mediaIDs: ["med_1"], quickReplies: ["Yes", "No"])
+    XCTAssertEqual(replied.reply?.externalId, "r_2")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/inbox/item_1/reply")
+    let body = try request.bodyJSON()
+    XCTAssertNil(body["text"])
+    XCTAssertEqual(body["media_ids"] as? [String], ["med_1"])
+    XCTAssertEqual(body["quick_replies"] as? [String], ["Yes", "No"])
+  }
+
+  func testStartConversationAndTypingHitTheConversationRoutes() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([
+      .json(#"{"data":{"conversationId":"c_9","item":{"id":"item_9"}}}"#, status: 201)
+    ])
+    let started = try await client.inbox.startConversation(
+      StartInboxConversationRequest(
+        accountID: "acc_1", handle: "jordanvale", text: "Hi Jordan", mediaIDs: ["med_1"]))
+    XCTAssertEqual(started.conversationId, "c_9")
+    XCTAssertEqual(started.item?.id, "item_9")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/inbox/conversations")
+    var body = try request.bodyJSON()
+    XCTAssertEqual(body["account_id"] as? String, "acc_1")
+    XCTAssertEqual(body["handle"] as? String, "jordanvale")
+    XCTAssertEqual(body["text"] as? String, "Hi Jordan")
+    XCTAssertEqual(body["media_ids"] as? [String], ["med_1"])
+    XCTAssertNil(body["comment_id"])
+
+    StubURLProtocol.script([
+      .json(#"{"data":{"conversationId":null,"item":null}}"#, status: 201)
+    ])
+    let privateReply = try await client.inbox.startConversation(
+      StartInboxConversationRequest(commentID: "item_1", text: "Sent you the details"))
+    XCTAssertNil(privateReply.conversationId)
+    XCTAssertNil(privateReply.item)
+    body = try XCTUnwrap(StubURLProtocol.requests.first).bodyJSON()
+    XCTAssertEqual(body["comment_id"] as? String, "item_1")
+    XCTAssertNil(body["account_id"])
+
+    StubURLProtocol.script([.json(#"{"data":{"typing":false}}"#)])
+    let typing = try await client.inbox.setTyping(
+      conversationID: "c_9", accountID: "acc_1", on: false)
+    XCTAssertEqual(typing.typing, false)
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/inbox/conversations/c_9/typing")
+    body = try request.bodyJSON()
+    XCTAssertEqual(body["account_id"] as? String, "acc_1")
+    XCTAssertEqual(body["on"] as? Bool, false)
+  }
 }
