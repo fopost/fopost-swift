@@ -67,10 +67,22 @@ public struct InboxResource: Resource {
     try await httpPatch("/inbox/\(escapePath(id))", body: body, as: InboxItem.self)
   }
 
-  /// Sends a reply on the platform as the connected account.
-  public func reply(_ id: String, text: String) async throws -> InboxReplyResult {
+  /// Edits our own comment on the platform. Also needs the `publish` scope.
+  public func editComment(_ id: String, text: String) async throws -> InboxItem {
+    try await httpPatch(
+      "/inbox/\(escapePath(id))", body: EditInboxCommentRequest(text: text), as: InboxItem.self)
+  }
+
+  /// Sends a reply on the platform as the connected account. `text` may be
+  /// omitted when `mediaIDs` is given. `mediaIDs` (at most 10) and
+  /// `quickReplies` (at most 13, each up to 20 characters) apply to DMs and
+  /// also need the `publish` scope.
+  public func reply(
+    _ id: String, text: String? = nil, mediaIDs: [String]? = nil, quickReplies: [String]? = nil
+  ) async throws -> InboxReplyResult {
     try await httpPost(
-      "/inbox/\(escapePath(id))/reply", body: InboxReplyRequest(text: text),
+      "/inbox/\(escapePath(id))/reply",
+      body: InboxReplyRequest(text: text, mediaIDs: mediaIDs, quickReplies: quickReplies),
       as: InboxReplyResult.self)
   }
 
@@ -84,7 +96,55 @@ public struct InboxResource: Resource {
     try await httpPost("/inbox/\(escapePath(id))/unhide", as: InboxItem.self)
   }
 
-  /// Deletes a comment on the platform.
+  /// Likes an item on the platform. Also needs the `publish` scope.
+  public func like(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/like", as: InboxItem.self)
+  }
+
+  /// Removes our like. Also needs the `publish` scope.
+  public func unlike(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/unlike", as: InboxItem.self)
+  }
+
+  /// Pins our own comment. Also needs the `publish` scope.
+  public func pin(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/pin", as: InboxItem.self)
+  }
+
+  /// Unpins our own comment. Also needs the `publish` scope.
+  public func unpin(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/unpin", as: InboxItem.self)
+  }
+
+  /// Reacts to a message with an emoji, or removes ours when `reaction` is
+  /// nil. Also needs the `publish` scope.
+  public func react(_ id: String, reaction: String?) async throws -> InboxItem {
+    try await httpPost(
+      "/inbox/\(escapePath(id))/react", body: ReactInboxItemRequest(reaction: reaction),
+      as: InboxItem.self)
+  }
+
+  /// Opens a DM, by handle from an account or as a private reply to a
+  /// comment. Also needs the `publish` scope.
+  public func startConversation(_ body: StartInboxConversationRequest) async throws
+    -> InboxConversationStart
+  {
+    try await httpPost("/inbox/conversations", body: body, as: InboxConversationStart.self)
+  }
+
+  /// Shows or clears the typing indicator in a DM thread. Also needs the
+  /// `publish` scope.
+  @discardableResult
+  public func setTyping(conversationID: String, accountID: String, on: Bool = true) async throws
+    -> InboxTypingResult
+  {
+    try await httpPost(
+      "/inbox/conversations/\(escapePath(conversationID))/typing",
+      body: InboxTypingRequest(accountID: accountID, on: on), as: InboxTypingResult.self)
+  }
+
+  /// Deletes a comment on the platform, or our own reply. Deleting our own
+  /// reply also needs the `publish` scope.
   @discardableResult
   public func delete(_ id: String) async throws -> InboxDeleteResult {
     try await httpDelete("/inbox/\(escapePath(id))", as: InboxDeleteResult.self)
