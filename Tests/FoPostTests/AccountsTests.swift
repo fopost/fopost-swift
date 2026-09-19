@@ -116,4 +116,59 @@ final class AccountsTests: XCTestCase {
     XCTAssertEqual(StubURLProtocol.requests[2].method, "DELETE")
     XCTAssertEqual(cleared.commands, [])
   }
+
+  func testSlackChannelsAndMembersDecodeTheList() async throws {
+    StubURLProtocol.script([
+      .json(
+        "{\"data\":[{\"id\":\"C1\",\"name\":\"general\",\"is_private\":false,"
+          + "\"is_member\":true,\"is_current\":true}]}"),
+      .json(
+        "{\"data\":[{\"id\":\"U1\",\"name\":\"ada\",\"real_name\":\"Ada\","
+          + "\"display_name\":null,\"avatar\":null,\"is_bot\":false}]}"),
+    ])
+    let client = try makeStubClient()
+
+    let channels = try await client.accounts.slackChannels("acc_1")
+    XCTAssertEqual(StubURLProtocol.requests[0].path, "/v1/accounts/acc_1/slack/channels")
+    XCTAssertEqual(channels.first?.isCurrent, true)
+
+    let members = try await client.accounts.slackMembers("acc_1")
+    XCTAssertEqual(StubURLProtocol.requests[1].path, "/v1/accounts/acc_1/slack/members")
+    XCTAssertEqual(members.first?.realName, "Ada")
+    XCTAssertNil(members.first?.displayName)
+  }
+
+  func testUpdateSlackIdentityOmitsUnsetFieldsAndSendsNullToClear() async throws {
+    let identity = "{\"data\":{\"username\":\"Bot\",\"icon_url\":null,\"icon_emoji\":\":rocket:\"}}"
+    StubURLProtocol.script([.json(identity), .json(identity)])
+    let client = try makeStubClient()
+
+    let current = try await client.accounts.slackIdentity("acc_1")
+    XCTAssertEqual(StubURLProtocol.requests[0].path, "/v1/accounts/acc_1/slack/identity")
+    XCTAssertEqual(current.iconEmoji, ":rocket:")
+
+    _ = try await client.accounts.updateSlackIdentity(
+      "acc_1", UpdateSlackIdentityRequest(username: "Bot", iconURL: .some(nil)))
+    let patch = StubURLProtocol.requests[1]
+    XCTAssertEqual(patch.method, "PATCH")
+    let body = try patch.bodyJSON()
+    XCTAssertEqual(body["username"] as? String, "Bot")
+    XCTAssertTrue(body["icon_url"] is NSNull)
+    XCTAssertNil(body["icon_emoji"])
+  }
+
+  func testSlackWebhookConnectionSurfacesAsConflict() async throws {
+    StubURLProtocol.script([
+      .json("{\"error\":\"webhook_connection\",\"message\":\"Reconnect\"}", status: 409)
+    ])
+    let client = try makeStubClient()
+
+    do {
+      _ = try await client.accounts.slackChannels("acc_1")
+      XCTFail("expected an error")
+    } catch let error as FoPostError {
+      guard case .conflict = error else { return XCTFail("expected a conflict") }
+      XCTAssertEqual(error.code, "webhook_connection")
+    }
+  }
 }

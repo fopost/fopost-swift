@@ -285,3 +285,85 @@ public struct TelegramBotCommands: Codable, Sendable, Hashable {
 struct CreateTelegramConnectCodeRequest: Encodable, Sendable {
   let workspaceId: String?
 }
+
+/// A Slack channel the app can post to.
+public struct SlackChannel: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let isPrivate: Bool?
+  /// Whether the bot is in the channel.
+  public let isMember: Bool?
+  /// The channel this account posts to.
+  public let isCurrent: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name
+    case isPrivate = "is_private"
+    case isMember = "is_member"
+    case isCurrent = "is_current"
+  }
+}
+
+/// A person in the connected Slack workspace.
+public struct SlackMember: Codable, Sendable, Hashable {
+  /// Slack user id; pass it as the handle to start a DM.
+  public let id: String
+  public let name: String?
+  public let realName: String?
+  public let displayName: String?
+  public let avatar: String?
+  public let isBot: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name, avatar
+    case realName = "real_name"
+    case displayName = "display_name"
+    case isBot = "is_bot"
+  }
+}
+
+/// The name and icon a Slack account posts under.
+public struct SlackIdentity: Codable, Sendable, Hashable {
+  /// Nil posts under the app name.
+  public let username: String?
+  public let iconURL: String?
+  /// An emoji code such as `:rocket:`.
+  public let iconEmoji: String?
+
+  enum CodingKeys: String, CodingKey {
+    case username
+    case iconURL = "icon_url"
+    case iconEmoji = "icon_emoji"
+  }
+}
+
+/// The body of ``AccountsResource/updateSlackIdentity(_:_:)``. A field left
+/// `nil` is omitted and keeps its value; `.some(nil)` sends `null` and clears
+/// it. Set `iconURL` or `iconEmoji`, not both.
+public struct UpdateSlackIdentityRequest: Encodable, Sendable {
+  /// 1-80 characters.
+  public var username: String??
+  /// An http(s) image URL.
+  public var iconURL: String??
+  /// An emoji code such as `:rocket:`.
+  public var iconEmoji: String??
+
+  public init(username: String?? = nil, iconURL: String?? = nil, iconEmoji: String?? = nil) {
+    self.username = username
+    self.iconURL = iconURL
+    self.iconEmoji = iconEmoji
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case username
+    case iconURL = "icon_url"
+    case iconEmoji = "icon_emoji"
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    if let username { try container.encode(username, forKey: .username) }
+    if let iconURL { try container.encode(iconURL, forKey: .iconURL) }
+    if let iconEmoji { try container.encode(iconEmoji, forKey: .iconEmoji) }
+  }
+}
