@@ -200,3 +200,88 @@ public struct AccountAnalyticsHistory: Codable, Sendable, Hashable {
   public let username: String?
   public let history: [AccountAnalyticsSnapshot]?
 }
+
+/// A one-time code that connects a Telegram chat when sent to the bot.
+public struct TelegramConnectCode: Codable, Sendable, Hashable {
+  public let code: String
+  /// What to send in the chat: `/connect <code>`.
+  public let command: String?
+  /// The publishing bot, without the @.
+  public let botUsername: String?
+  /// Opens a private chat with the bot, code included.
+  public let deepLink: String?
+  /// Adds the bot to a group, code included.
+  public let groupLink: String?
+  public let expiresAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case code, command
+    case botUsername = "bot_username"
+    case deepLink = "deep_link"
+    case groupLink = "group_link"
+    case expiresAt = "expires_at"
+  }
+}
+
+/// Where a Telegram connect code stands.
+public struct TelegramConnectStatus: Codable, Sendable, Hashable {
+  public let status: TelegramConnectState?
+  /// The connected account, once ``TelegramConnectState/connected``.
+  public let accountID: String?
+  /// Why the connection failed, when ``TelegramConnectState/failed``.
+  public let reason: TelegramConnectFailure?
+
+  enum CodingKeys: String, CodingKey {
+    case status, reason
+    case accountID = "account_id"
+  }
+}
+
+/// The states a Telegram connect code moves through.
+public struct TelegramConnectState: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let pending: Self = "pending"
+  public static let connected: Self = "connected"
+  public static let failed: Self = "failed"
+  public static let expired: Self = "expired"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [.pending, .connected, .failed, .expired]
+}
+
+/// Why a Telegram connect code failed.
+public struct TelegramConnectFailure: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let cardRequired: Self = "card_required"
+  public static let slotTaken: Self = "slot_taken"
+  public static let workspaceUnavailable: Self = "workspace_unavailable"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [.cardRequired, .slotTaken, .workspaceUnavailable]
+}
+
+/// One entry in a Telegram bot's command menu.
+public struct TelegramBotCommand: Codable, Sendable, Hashable {
+  /// 1-32 lowercase letters, digits or underscores, without the slash.
+  public let command: String
+  /// 1-256 characters.
+  public let description: String
+
+  public init(command: String, description: String) {
+    self.command = command
+    self.description = description
+  }
+}
+
+/// The command menu a Telegram bot shows in a connected chat.
+public struct TelegramBotCommands: Codable, Sendable, Hashable {
+  public let commands: [TelegramBotCommand]
+}
+
+struct CreateTelegramConnectCodeRequest: Encodable, Sendable {
+  let workspaceId: String?
+}

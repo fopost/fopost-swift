@@ -85,4 +85,47 @@ public struct AccountsResource: Resource {
     return try await httpGet(
       "/accounts/\(escapePath(id))/analytics", query: query, as: AccountAnalyticsHistory.self)
   }
+
+  /// Mints a one-time code, valid for 15 minutes. Sending `/connect <code>` to
+  /// the bot in a chat connects that chat. Omit `workspaceID` for a key bound
+  /// to one workspace.
+  public func createTelegramConnectCode(workspaceID: String? = nil) async throws
+    -> TelegramConnectCode
+  {
+    try await httpPost(
+      "/accounts/telegram/connect-code",
+      body: CreateTelegramConnectCodeRequest(workspaceId: workspaceID),
+      as: TelegramConnectCode.self)
+  }
+
+  /// Where a Telegram connect code stands: pending, connected, failed, or
+  /// expired.
+  public func telegramConnectStatus(code: String) async throws -> TelegramConnectStatus {
+    var query = Query()
+    query.add("code", code)
+    return try await httpGet(
+      "/accounts/telegram/connect-code/status", query: query, as: TelegramConnectStatus.self)
+  }
+
+  /// The command menu the bot shows in a connected Telegram chat.
+  public func telegramBotCommands(_ id: String) async throws -> TelegramBotCommands {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/telegram/commands", as: TelegramBotCommands.self)
+  }
+
+  /// Replaces the command menu for a connected Telegram chat (1-100 commands).
+  public func setTelegramBotCommands(_ id: String, commands: [TelegramBotCommand]) async throws
+    -> TelegramBotCommands
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/telegram/commands",
+      body: TelegramBotCommands(commands: commands), as: TelegramBotCommands.self)
+  }
+
+  /// Clears the command menu for a connected Telegram chat.
+  @discardableResult
+  public func deleteTelegramBotCommands(_ id: String) async throws -> TelegramBotCommands {
+    try await httpDelete(
+      "/accounts/\(escapePath(id))/telegram/commands", as: TelegramBotCommands.self)
+  }
 }
