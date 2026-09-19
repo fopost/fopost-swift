@@ -66,6 +66,10 @@ public final class FoPostClient: Sendable {
   public var workspaces: WorkspacesResource { WorkspacesResource(transport: transport) }
   /// Connected social accounts.
   public var accounts: AccountsResource { AccountsResource(transport: transport) }
+  /// Account groups, named sets of accounts a post can target at once.
+  public var accountGroups: AccountGroupsResource {
+    AccountGroupsResource(transport: transport)
+  }
   /// The X communities an account can post into.
   public var communities: CommunitiesResource { CommunitiesResource(transport: transport) }
   /// Labels, the campaign tags posts are grouped by.
