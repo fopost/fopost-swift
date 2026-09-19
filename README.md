@@ -130,7 +130,7 @@ let post = try await client.posts.create(
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection |
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
-| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply, hide, delete, reply approvals |
+| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, audiences, targeting search, lead forms and leads |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
@@ -150,7 +150,10 @@ and `total`.
 ## Inbox and ads
 
 Every inbox call needs an API key with the `inbox` scope, every ads call the
-`ads` scope. The four ads calls that spend money, `boost`, `create`,
+`ads` scope. The inbox calls that act on the platform as the account,
+`editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
+`setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
+reply, also need `publish`. The four ads calls that spend money, `boost`, `create`,
 `setStatus`, and `delete`, also need `publish`. A boost or ad starts paused
 unless `paused` is `false`.
 
