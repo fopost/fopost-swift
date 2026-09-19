@@ -6,7 +6,10 @@ public struct Account: Codable, Sendable, Hashable {
   public let workspaceId: String?
   public let platform: Platform?
   public let username: String?
+  /// The display name override when set, else ``platformName``.
   public let name: String?
+  /// The name the platform itself reports.
+  public let platformName: String?
   public let avatar: String?
   public let isPrimary: Bool?
   public let active: Bool?
@@ -28,7 +31,10 @@ public struct AccountDetail: Codable, Sendable, Hashable {
   public let workspaceID: String?
   public let platform: Platform?
   public let username: String?
+  /// The display name override when set, else ``platformName``.
   public let name: String?
+  /// The name the platform itself reports.
+  public let platformName: String?
   public let avatar: String?
   public let workspace: AccountWorkspaceRef?
   public let createdAt: Date?
@@ -37,6 +43,7 @@ public struct AccountDetail: Codable, Sendable, Hashable {
   enum CodingKeys: String, CodingKey {
     case id, platform, username, name, avatar, workspace
     case workspaceID = "workspace_id"
+    case platformName = "platform_name"
     case createdAt = "created_at"
     case updatedAt = "updated_at"
   }
@@ -63,6 +70,51 @@ public struct CreateAccountRequest: Codable, Sendable {
     self.name = name
     self.avatar = avatar
     self.credentials = credentials
+  }
+}
+
+/// An account's names after ``AccountsResource/rename(_:displayName:)``.
+public struct RenamedAccount: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let platformName: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name
+    case platformName = "platform_name"
+  }
+}
+
+/// Where an account lives after ``AccountsResource/move(_:workspaceID:)``.
+public struct MovedAccount: Codable, Sendable, Hashable {
+  public let id: String
+  public let workspaceID: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case workspaceID = "workspace_id"
+  }
+}
+
+struct UpdateAccountRequest: Encodable, Sendable {
+  let displayName: String?
+
+  enum CodingKeys: String, CodingKey {
+    case displayName = "display_name"
+  }
+
+  // The API requires the key, so nil is sent as an explicit null.
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(displayName, forKey: .displayName)
+  }
+}
+
+struct MoveAccountRequest: Encodable, Sendable {
+  let workspaceID: String
+
+  enum CodingKeys: String, CodingKey {
+    case workspaceID = "workspace_id"
   }
 }
 

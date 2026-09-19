@@ -141,6 +141,8 @@ public struct PostListParams: Sendable {
 public struct CreatePostRequest: Codable, Sendable {
   public var workspaceID: String
   public var accounts: [String]
+  /// A group whose accounts are added to ``accounts``, each account once.
+  public var accountGroupID: String?
   public var content: [ContentBlock]
   /// `post`, `thread`, or `reel`.
   public var contentType: String?
@@ -164,7 +166,8 @@ public struct CreatePostRequest: Codable, Sendable {
   public var companionOf: String?
 
   public init(
-    workspaceID: String, accounts: [String], content: [ContentBlock],
+    workspaceID: String, accounts: [String] = [], accountGroupID: String? = nil,
+    content: [ContentBlock],
     contentType: String? = nil, artifactType: String? = nil, status: PostStatus? = nil,
     scheduleAt: Date? = nil, repeatable: Bool? = nil, repeatableTimes: Int? = nil,
     repeatableGap: Int? = nil, repeatableGapUnit: String? = nil, labels: [String]? = nil,
@@ -175,6 +178,7 @@ public struct CreatePostRequest: Codable, Sendable {
   ) {
     self.workspaceID = workspaceID
     self.accounts = accounts
+    self.accountGroupID = accountGroupID
     self.content = content
     self.contentType = contentType
     self.artifactType = artifactType
@@ -198,6 +202,7 @@ public struct CreatePostRequest: Codable, Sendable {
   enum CodingKeys: String, CodingKey {
     case accounts, content, status, repeatable, labels, title, summary, settings
     case workspaceID = "workspace_id"
+    case accountGroupID = "account_group_id"
     case contentType = "content_type"
     case artifactType = "artifact_type"
     case scheduleAt = "schedule_at"

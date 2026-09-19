@@ -122,7 +122,8 @@ let post = try await client.posts.create(
 | --- | --- |
 | `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, health, validation, token refresh, history |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history |
+| `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
 | `client.webhooks` | Outbound event subscriptions |

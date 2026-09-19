@@ -129,4 +129,16 @@ final class PostsTests: XCTestCase {
     XCTAssertEqual(request.path, "/v1/posts/post_1")
     XCTAssertNil(request.body)
   }
+
+  func testCreatePostCanTargetAGroupAlone() async throws {
+    StubURLProtocol.script([.json("{\"data\":{\"id\":\"post_1\"}}", status: 201)])
+    let client = try makeStubClient()
+
+    _ = try await client.posts.create(
+      CreatePostRequest(
+        workspaceID: "ws_1", accountGroupID: "grp_1", content: [ContentBlock(text: "Hi")]))
+
+    let body = try XCTUnwrap(StubURLProtocol.requests.first).bodyJSON()
+    XCTAssertEqual(body["account_group_id"] as? String, "grp_1")
+  }
 }

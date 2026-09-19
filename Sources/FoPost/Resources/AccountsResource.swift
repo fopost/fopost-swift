@@ -5,10 +5,11 @@ public struct AccountsResource: Resource {
   let transport: Transport
 
   /// The connected accounts the key can reach, optionally narrowed to one
-  /// workspace.
-  public func list(workspaceID: String? = nil) async throws -> [Account] {
+  /// workspace or one account group.
+  public func list(workspaceID: String? = nil, groupID: String? = nil) async throws -> [Account] {
     var query = Query()
     query.add("workspaceId", workspaceID)
+    query.add("group_id", groupID)
     return try await httpGet("/accounts", query: query, as: [Account].self)
   }
 
@@ -20,6 +21,22 @@ public struct AccountsResource: Resource {
   /// Connects an account with credentials.
   public func create(_ body: CreateAccountRequest) async throws -> CreatedAccount {
     try await httpPost("/accounts", body: body, as: CreatedAccount.self)
+  }
+
+  /// Sets the name FoPost shows for an account. A nil or empty name restores
+  /// the platform's own name.
+  public func rename(_ id: String, displayName: String?) async throws -> RenamedAccount {
+    try await httpPatch(
+      "/accounts/\(escapePath(id))", body: UpdateAccountRequest(displayName: displayName),
+      as: RenamedAccount.self)
+  }
+
+  /// Moves an account to another workspace the caller owns. A 409 with the
+  /// code `move_blocked` lists the reasons under the `blocking_tables` field.
+  public func move(_ id: String, workspaceID: String) async throws -> MovedAccount {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/move", body: MoveAccountRequest(workspaceID: workspaceID),
+      as: MovedAccount.self)
   }
 
   /// Disconnects an account.
