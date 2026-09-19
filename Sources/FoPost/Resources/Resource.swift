@@ -32,15 +32,25 @@ extension Resource {
       as: Response.self)
   }
 
+  func httpPatch<Response: Decodable>(
+    _ path: String, body: (any Encodable & Sendable)? = nil, query: Query = Query(),
+    unwrap: Bool = true, as type: Response.Type
+  ) async throws -> Response {
+    try await transport.send(
+      try request(method: "PATCH", path: path, body: body, query: query, unwrap: unwrap),
+      as: Response.self)
+  }
+
   func httpDelete(_ path: String) async throws {
     try await transport.send(HTTPRequest(method: "DELETE", path: path, unwrap: false))
   }
 
-  func httpDelete<Response: Decodable>(_ path: String, as type: Response.Type) async throws
-    -> Response
-  {
+  func httpDelete<Response: Decodable>(
+    _ path: String, query: Query = Query(), as type: Response.Type
+  ) async throws -> Response {
     try await transport.send(
-      HTTPRequest(method: "DELETE", path: path, unwrap: true), as: Response.self)
+      HTTPRequest(method: "DELETE", path: path, query: query.items, unwrap: true),
+      as: Response.self)
   }
 
   func httpUpload<Response: Decodable>(_ path: String, form: MultipartForm, as type: Response.Type)
