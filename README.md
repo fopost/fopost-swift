@@ -118,6 +118,8 @@ let post = try await client.posts.create(
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection |
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library and uploads |
+| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply, hide, delete, reply approvals |
+| `client.ads` | Boosts, ads, Meta Ads connections, sources, audiences, targeting search, lead forms and leads |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
@@ -127,6 +129,32 @@ walks every page as an `AsyncThrowingStream`:
 for try await post in client.posts.all(PostListParams(status: .published)) {
     print(post.id)
 }
+```
+
+Inbox lists return an `InboxPage<T>` instead, whose `meta` is `page`, `perPage`,
+and `total`.
+
+## Inbox and ads
+
+Every inbox call needs an API key with the `inbox` scope, every ads call the
+`ads` scope. The four ads calls that spend money, `boost`, `create`,
+`setStatus`, and `delete`, also need `publish`. A boost or ad starts paused
+unless `paused` is `false`.
+
+```swift
+let unread = try await client.inbox.list(
+    InboxListParams(workspaceID: workspace.id, state: .unread, sort: .unanswered))
+for item in unread.data where item.canReply == true {
+    try await client.inbox.reply(item.id, text: "Thanks for the note!")
+}
+
+let ad = try await client.ads.boost(
+    BoostPostRequest(
+        workspaceId: workspace.id, connectionId: connection.id, adAccountId: "act_1234567890",
+        postId: post.id, accountId: account.id, name: "Autumn drop boost", goal: .engagement,
+        budget: AdBudget(minor: 2000, type: .daily),
+        targeting: AdTargeting(countries: ["US", "CA"], ageMin: 21, ageMax: 45)))
+_ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
 ```
 
 ## Error handling
