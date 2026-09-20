@@ -122,7 +122,7 @@ let post = try await client.posts.create(
 | --- | --- |
 | `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
@@ -135,6 +135,7 @@ let post = try await client.posts.create(
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
+| `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
@@ -192,10 +193,10 @@ _ = try await client.sequences.unenroll(sequence.id, [contactID])
 
 ## Inbox and ads
 
-Every inbox, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
+Every inbox, knowledge, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
-`setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
+`setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
 reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
 duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything

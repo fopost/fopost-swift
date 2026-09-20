@@ -93,6 +93,8 @@ public final class FoPostClient: Sendable {
   public var broadcasts: BroadcastsResource { BroadcastsResource(transport: transport) }
   /// A series of messages on a delay, walked per enrolled contact.
   public var sequences: SequencesResource { SequencesResource(transport: transport) }
+  /// The workspace knowledge base, which grounds drafted replies.
+  public var knowledge: KnowledgeResource { KnowledgeResource(transport: transport) }
   /// Boosts, ads, audiences, and lead forms on a Meta Ads connection.
   public var ads: AdsResource { AdsResource(transport: transport) }
   /// Content, length, and media checks that create nothing.
