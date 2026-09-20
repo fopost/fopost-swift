@@ -170,7 +170,7 @@ let post = try await client.posts.create(
 | --- | --- |
 | `client.posts` | List, create, update (both with files attached), publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription, per-network metrics |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription, per-network metrics, Reddit subreddits, rules, flairs and the default subreddit |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
@@ -178,14 +178,14 @@ let post = try await client.posts.create(
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost |
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
-| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
+| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.blog` | Blog articles for a website: settings and the website signing secret, the keyword plan, and articles from request through publish |
-| `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
+| `client.validate` | Check a post, text length, a media URL, or a subreddit against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
 | `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
 | `client.whatsapp` | Templates, flows, groups, blocking, commerce and the profile on a WhatsApp Business number |
