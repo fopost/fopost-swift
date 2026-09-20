@@ -159,7 +159,8 @@ public struct AccountsResource: Resource {
 
   /// The prompts shown before the first message. A network without them answers `400`.
   public func iceBreakers(_ id: String) async throws -> MetaIceBreakers {
-    try await httpGet("/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
+    try await httpGet(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
   }
 
   /// Replaces the ice breakers, up to four.

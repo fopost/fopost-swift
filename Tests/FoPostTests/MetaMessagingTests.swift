@@ -19,7 +19,8 @@ final class MetaMessagingTests: XCTestCase {
       "acc_1", [MetaIceBreaker(question: "Hours?", payload: "HOURS")])
     let put = StubURLProtocol.requests[1]
     XCTAssertEqual(put.method, "PUT")
-    XCTAssertEqual(put.bodyString, "{\"ice_breakers\":[{\"question\":\"Hours?\",\"payload\":\"HOURS\"}]}")
+    XCTAssertEqual(
+      put.bodyString, "{\"ice_breakers\":[{\"question\":\"Hours?\",\"payload\":\"HOURS\"}]}")
 
     let cleared = try await client.accounts.deleteIceBreakers("acc_1")
     XCTAssertEqual(StubURLProtocol.requests[2].method, "DELETE")
@@ -35,7 +36,12 @@ final class MetaMessagingTests: XCTestCase {
     let client = try makeStubClient()
 
     let set = try await client.accounts.setPersistentMenu(
-      "acc_1", [MetaPersistentMenuEntry(callToActions: [.link(title: "Shop", url: "https://example.com/shop")])])
+      "acc_1",
+      [
+        MetaPersistentMenuEntry(callToActions: [
+          .link(title: "Shop", url: "https://example.com/shop")
+        ])
+      ])
 
     let put = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(put.method, "PUT")
@@ -62,8 +68,10 @@ final class MetaMessagingTests: XCTestCase {
 
   func testALapsedSubscriptionIsReportedAndResubscribed() async throws {
     StubURLProtocol.script([
-      .json("{\"data\":{\"subscribed\":false,\"fields\":[\"feed\"],\"missing_fields\":[\"messages\"]}}"),
-      .json("{\"data\":{\"subscribed\":true,\"fields\":[\"feed\",\"messages\"],\"missing_fields\":[]}}"),
+      .json(
+        "{\"data\":{\"subscribed\":false,\"fields\":[\"feed\"],\"missing_fields\":[\"messages\"]}}"),
+      .json(
+        "{\"data\":{\"subscribed\":true,\"fields\":[\"feed\",\"messages\"],\"missing_fields\":[]}}"),
     ])
     let client = try makeStubClient()
 
