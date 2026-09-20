@@ -183,6 +183,9 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let canQuickReply: Bool?
   /// A DM can be opened from this comment with ``InboxResource/startConversation(_:)``.
   public let canPrivateReply: Bool?
+  /// The platform's own state for a comment: `published`, `held`, `spam` or
+  /// `rejected`. Nil where the platform does not report one.
+  public let moderationStatus: String?
   /// The FoPost post this item was left under, when we published it.
   public let post: [String: JSONValue]?
   public let postContext: InboxPostContext?
@@ -239,6 +242,9 @@ public struct InboxAccount: Codable, Sendable, Hashable {
   public let dmPendingReason: String?
   /// A new DM can be opened from this account by handle.
   public let canStartConversation: Bool?
+  /// The grant predates a permission the inbox read needs; the account is not
+  /// polled until someone reconnects it.
+  public let reconnectRequired: Bool?
 }
 
 /// What one platform's inbox can do today.
