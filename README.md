@@ -122,7 +122,7 @@ let post = try await client.posts.create(
 | --- | --- |
 | `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
@@ -131,7 +131,11 @@ let post = try await client.posts.create(
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
+| `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
+| `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
+| `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
+| `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
@@ -147,12 +151,52 @@ for try await post in client.posts.all(PostListParams(status: .published)) {
 Inbox lists return an `InboxPage<T>` instead, whose `meta` is `page`, `perPage`,
 and `total`.
 
+## Broadcasts and sequences
+
+A broadcast is one message into every conversation you already have with a segment of your contacts; a sequence is a series of them on a delay. Neither opens a cold DM.
+
+Nothing is sent into a closed messaging window: Messenger and Instagram take a business-initiated message only within 24 hours of the contact's last one, so recipients outside it come back skipped with `.windowClosed` rather than attempted. Telegram, Slack, Bluesky and Reddit have no window. The number sent is therefore often lower than the audience, and that is correct rather than a failure.
+
+```swift
+let broadcast = try await client.broadcasts.create(
+  CreateBroadcastRequest(
+    workspaceID: workspaceID,
+    accountID: accountID,
+    name: "September check-in",
+    text: "New colours just landed. Want a look?",
+    audience: AudienceFilter(platforms: ["instagram"])))
+
+// `recipients` is how many contacts matched, not how many will be messaged.
+let sent = try await client.broadcasts.send(broadcast.id)
+print(sent.recipients)
+
+// Who was skipped, and why.
+let skipped = try await client.broadcasts.recipients(broadcast.id, status: "skipped")
+for recipient in skipped.data {
+  print("\(recipient.displayName ?? "") — \(recipient.skipReason?.rawValue ?? "")")
+}
+
+let sequence = try await client.sequences.create(
+  CreateSequenceRequest(
+    workspaceID: workspaceID, accountID: accountID, name: "Welcome",
+    steps: [
+      SequenceStep(delayHours: 0, text: "Thanks for the follow — anything I can help with?"),
+      SequenceStep(delayHours: 48, text: "Here is what people usually ask us first."),
+    ]))
+
+// By id, or by the same audience filter a broadcast takes.
+_ = try await client.sequences.enroll(sequence.id, EnrollRequest(contactIDs: [contactID]))
+
+// Nothing further fires for them.
+_ = try await client.sequences.unenroll(sequence.id, [contactID])
+```
+
 ## Inbox and ads
 
-Every inbox call needs an API key with the `inbox` scope, every ads call the
+Every inbox, knowledge, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
-`setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
+`setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
 reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
 duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
@@ -172,6 +216,49 @@ let ad = try await client.ads.boost(
         budget: AdBudget(minor: 2000, type: .daily),
         targeting: AdTargeting(countries: ["US", "CA"], ageMin: 21, ageMax: 45)))
 _ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
+```
+
+## Contacts
+
+The people behind the inbox: one person however many handles they write from. An inbound item files its author, a reply files whoever you answered, and both fold into whatever is already on file.
+
+```swift
+let page = try await client.contacts.list(workspaceID: workspaceID, search: "ada")
+for contact in page.data {
+  print("\(contact.displayName ?? "") — \(contact.channels.count) handles")
+}
+
+// Folds into whoever already holds the first channel, so this cannot duplicate someone.
+let contact = try await client.contacts.create(
+  CreateContactRequest(
+    workspaceID: workspaceID,
+    channels: [ContactChannel(platform: "x", handle: "ada_writes")],
+    displayName: "Ada Okafor",
+    fields: ["plan_tier": "Pro"]))
+
+// A field set to nil is cleared; everything left out is untouched.
+_ = try await client.contacts.update(contact.id, UpdateContactRequest(fields: ["region": nil]))
+try await client.contacts.delete(contact.id)   // the messages stay in the inbox
+
+// The threads this person appears in, newest first.
+for thread in try await client.contacts.conversations(contact.id) {
+  print("\(thread.platform) \(thread.messages) messages")
+}
+
+// platform and handle are required columns; any other column is a custom field key.
+let result = try await client.contacts.importCSV(
+  workspaceID: workspaceID, csv: "platform,handle\nx,ada_writes")
+print("\(result.created) created, \(result.merged) merged")
+
+// The columns your workspace keeps.
+let field = try await client.contacts.createField(
+  CreateContactFieldRequest(
+    workspaceID: workspaceID, key: "plan_tier", name: "Plan Tier", type: .select,
+    options: ["Free", "Pro"]))
+try await client.contacts.deleteField(field.id)   // removes every answer to it
+
+// Volume and median reply time per thread. Needs the `analytics` scope.
+let report = try await client.contacts.conversationAnalytics(days: 30, sort: "slowest")
 ```
 
 ## Validation
