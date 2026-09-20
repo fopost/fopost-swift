@@ -158,12 +158,16 @@ public struct AdTargeting: Codable, Sendable, Hashable {
   public var interests: [AdTargetingEntry]?
   public var behaviors: [AdTargetingEntry]?
   public var income: [AdTargetingEntry]?
+  /// Facets a network defines for itself, keyed by the targeting search type
+  /// they were found with. ``AdsResource/providers()`` reports which a network
+  /// accepts.
+  public var facets: [String: [AdTargetingEntry]]?
 
   public init(
     countries: [String], ageMin: Int, ageMax: Int, gender: AdGender = .all,
     audienceIds: [String]? = nil, locations: [AdLocation]? = nil,
     interests: [AdTargetingEntry]? = nil, behaviors: [AdTargetingEntry]? = nil,
-    income: [AdTargetingEntry]? = nil
+    income: [AdTargetingEntry]? = nil, facets: [String: [AdTargetingEntry]]? = nil
   ) {
     self.countries = countries
     self.ageMin = ageMin
@@ -174,6 +178,7 @@ public struct AdTargeting: Codable, Sendable, Hashable {
     self.interests = interests
     self.behaviors = behaviors
     self.income = income
+    self.facets = facets
   }
 }
 
@@ -384,9 +389,290 @@ public struct LeadsPage: Codable, Sendable, Hashable {
   public let nextCursor: String?
 }
 
-/// The Meta login URL ``AdsResource/authorizeMeta(_:)`` hands back.
+/// The login URL ``AdsResource/authorize(_:_:)`` hands back.
 public struct MetaAdsAuthorization: Codable, Sendable, Hashable {
   public let url: String
+}
+
+/// A token a network expands in a link's tracking parameters at delivery time.
+public struct AdTrackingMacro: Codable, Sendable, Hashable {
+  public let token: String?
+  public let description: String?
+}
+
+/// An ad network from the API's registry. `configured` false cannot be
+/// connected yet.
+public struct AdProvider: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// Logo slug.
+  public let logo: String?
+  public let configured: Bool?
+  public let connectMethods: [String]?
+  /// What the network supports: campaigns, audiences, conversions, forecasts,
+  /// adLibrary, and so on.
+  public let capabilities: [String: Bool]?
+  /// What ``AdsResource/searchTargeting(_:)`` accepts here, in picker order.
+  public let targetingFacets: [String]?
+  public let trackingMacros: [AdTrackingMacro]?
+}
+
+/// One row of a company-list upload. At least one of `name`, `domain`,
+/// `pageUrl` or `ticker` is required; the rows are never stored.
+public struct AdCompany: Codable, Sendable, Hashable {
+  public var name: String?
+  public var domain: String?
+  /// The company's page on the network.
+  public var pageUrl: String?
+  /// Stock ticker, where the network matches on one.
+  public var ticker: String?
+  public var country: String?
+
+  public init(
+    name: String? = nil, domain: String? = nil, pageUrl: String? = nil, ticker: String? = nil,
+    country: String? = nil
+  ) {
+    self.name = name
+    self.domain = domain
+    self.pageUrl = pageUrl
+    self.ticker = ticker
+    self.country = country
+  }
+}
+
+/// How many company rows the network took.
+public struct AddedAudienceCompanies: Codable, Sendable, Hashable {
+  public let added: Int?
+}
+
+/// The body of ``AdsResource/bidPricing(_:)`` and
+/// ``AdsResource/supplyForecast(_:)``.
+public struct AdForecastRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  /// The ad account as the network addresses it.
+  public var adAccountId: String
+  public var goal: AdGoal
+  public var targeting: AdTargeting
+  public var placements: [String]?
+  /// `CPC`, `CPM` or `CPV`. Bid pricing only.
+  public var bidType: String?
+  /// The budget for the forecast window. Supply forecast only.
+  public var budgetMinor: Int?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, goal: AdGoal,
+    targeting: AdTargeting, placements: [String]? = nil, bidType: String? = nil,
+    budgetMinor: Int? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.goal = goal
+    self.targeting = targeting
+    self.placements = placements
+    self.bidType = bidType
+    self.budgetMinor = budgetMinor
+  }
+}
+
+/// What the auction costs, in minor units of the ad account currency.
+public struct BidPricing: Codable, Sendable, Hashable {
+  public let currency: String?
+  public let suggestedBidMinor: Int?
+  public let minBidMinor: Int?
+  public let maxBidMinor: Int?
+  public let dailyBudgetFloorMinor: Int?
+}
+
+/// What an audience would deliver at a budget, over the network's own window.
+/// `ready` is false while the network has no answer for that audience.
+public struct SupplyForecast: Codable, Sendable, Hashable {
+  public let currency: String?
+  public let impressions: Int?
+  public let clicks: Int?
+  public let spendMinor: Int?
+  /// Days the numbers cover.
+  public let windowDays: Int?
+  public let ready: Bool?
+}
+
+/// How the network attributes a sale or a sign-up back to an ad set.
+public struct ConversionRule: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// `purchase`, `lead`, `sign_up`, `add_to_cart`, `download`, `install`,
+  /// `key_page_view` or `other`.
+  public let type: String?
+  /// `last_touch` or `each_campaign`.
+  public let attribution: String?
+  public let postClickWindowDays: Int?
+  public let viewThroughWindowDays: Int?
+  public let valueMinor: Int?
+  public let currency: String?
+  public let enabled: Bool?
+  public let createdAt: String?
+  /// Ad sets this rule is attached to.
+  public let campaignIds: [String]?
+}
+
+/// The rule ``AdsResource/createConversionRule(_:)`` made.
+public struct CreatedConversionRule: Codable, Sendable, Hashable {
+  public let id: String?
+}
+
+/// The body of ``AdsResource/createConversionRule(_:)``.
+public struct CreateConversionRuleRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var name: String
+  /// `purchase`, `lead`, `sign_up`, `add_to_cart`, `download`, `install`,
+  /// `key_page_view` or `other`.
+  public var type: String
+  /// `last_touch` or `each_campaign`.
+  public var attribution: String
+  public var postClickWindowDays: Int?
+  public var viewThroughWindowDays: Int?
+  /// What one conversion is worth, minor units.
+  public var valueMinor: Int?
+  public var currency: String?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, name: String, type: String,
+    attribution: String, postClickWindowDays: Int? = nil, viewThroughWindowDays: Int? = nil,
+    valueMinor: Int? = nil, currency: String? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.name = name
+    self.type = type
+    self.attribution = attribution
+    self.postClickWindowDays = postClickWindowDays
+    self.viewThroughWindowDays = viewThroughWindowDays
+    self.valueMinor = valueMinor
+    self.currency = currency
+  }
+}
+
+/// Changes to a conversion rule. Only the fields you set move.
+public struct UpdateConversionRuleRequest: Codable, Sendable {
+  public var name: String?
+  public var type: String?
+  public var attribution: String?
+  public var postClickWindowDays: Int?
+  public var viewThroughWindowDays: Int?
+  public var valueMinor: Int?
+  public var currency: String?
+  public var enabled: Bool?
+
+  public init(
+    name: String? = nil, type: String? = nil, attribution: String? = nil,
+    postClickWindowDays: Int? = nil, viewThroughWindowDays: Int? = nil, valueMinor: Int? = nil,
+    currency: String? = nil, enabled: Bool? = nil
+  ) {
+    self.name = name
+    self.type = type
+    self.attribution = attribution
+    self.postClickWindowDays = postClickWindowDays
+    self.viewThroughWindowDays = viewThroughWindowDays
+    self.valueMinor = valueMinor
+    self.currency = currency
+    self.enabled = enabled
+  }
+}
+
+/// What a conversion rule recorded over a date range.
+public struct ConversionMetrics: Codable, Sendable, Hashable {
+  public let conversions: Int?
+  public let postClickConversions: Int?
+  public let viewThroughConversions: Int?
+  public let valueMinor: Int?
+  public let costPerConversionMinor: Int?
+}
+
+/// One conversion sent back to the network. It needs an `email` or a
+/// `clickId`; the address is hashed inside the API and nothing is stored.
+public struct ConversionEvent: Codable, Sendable, Hashable {
+  /// Epoch milliseconds.
+  public var happenedAt: Int
+  public var valueMinor: Int?
+  public var currency: String?
+  /// Your own id for the event, so a replay is counted once.
+  public var eventId: String?
+  public var email: String?
+  /// The network's click id, as the landing page received it.
+  public var clickId: String?
+
+  public init(
+    happenedAt: Int, valueMinor: Int? = nil, currency: String? = nil, eventId: String? = nil,
+    email: String? = nil, clickId: String? = nil
+  ) {
+    self.happenedAt = happenedAt
+    self.valueMinor = valueMinor
+    self.currency = currency
+    self.eventId = eventId
+    self.email = email
+    self.clickId = clickId
+  }
+}
+
+/// How many conversion events the network took.
+public struct AcceptedConversionEvents: Codable, Sendable, Hashable {
+  public let accepted: Int?
+}
+
+/// A public ad from the network's own library, never a connection's own data.
+public struct AdLibraryAd: Codable, Sendable, Hashable {
+  public let id: String
+  public let advertiserName: String?
+  public let advertiserUrl: String?
+  public let headline: String?
+  public let body: String?
+  public let type: String?
+  public let thumbnailUrl: String?
+  public let firstImpressionAt: String?
+  public let lastImpressionAt: String?
+  public let countries: [String]?
+  public let detailsUrl: String?
+  /// The paying entity, where the network discloses one.
+  public let payer: String?
+  public let impressionsRange: String?
+}
+
+/// One page of ad-library results. Pass `nextCursor` back as the cursor.
+public struct AdLibraryPage: Codable, Sendable, Hashable {
+  public let ads: [AdLibraryAd]?
+  public let nextCursor: String?
+}
+
+/// What an ad-library search narrows on. Dates are `YYYY-MM-DD`.
+public struct AdLibraryParams: Sendable {
+  public var workspaceID: String?
+  public var connectionID: String
+  public var keyword: String?
+  public var advertiser: String?
+  /// ISO 3166-1 alpha-2 codes.
+  public var countries: [String]?
+  public var since: String?
+  public var until: String?
+  public var cursor: String?
+
+  public init(
+    connectionID: String, workspaceID: String? = nil, keyword: String? = nil,
+    advertiser: String? = nil, countries: [String]? = nil, since: String? = nil,
+    until: String? = nil, cursor: String? = nil
+  ) {
+    self.connectionID = connectionID
+    self.workspaceID = workspaceID
+    self.keyword = keyword
+    self.advertiser = advertiser
+    self.countries = countries
+    self.since = since
+    self.until = until
+    self.cursor = cursor
+  }
 }
 
 /// The audience ``AdsResource/createAudience(_:)`` made.
@@ -1213,6 +1499,18 @@ struct DuplicateAdObjectRequest: Codable, Sendable {
 
 struct AddAudienceUsersRequest: Codable, Sendable {
   var emails: [String]
+}
+
+struct AddAudienceCompaniesRequest: Codable, Sendable {
+  var companies: [AdCompany]
+}
+
+struct ConversionAssociationRequest: Codable, Sendable {
+  var campaignId: String
+}
+
+struct ConversionEventsRequest: Codable, Sendable {
+  var events: [ConversionEvent]
 }
 
 struct ArchiveLeadFormRequest: Codable, Sendable {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Boosts, ads, the campaign tree, creatives, audiences, insights, and lead
-/// forms on a Meta Ads connection. Every call needs the `ads` scope; the ones
+/// forms on an ad connection. Every call needs the `ads` scope; the ones
 /// that spend money (``boost(_:)``, ``create(_:)``,
 /// ``setStatus(_:workspaceID:status:)``, ``delete(_:workspaceID:)``,
 /// ``bulkSetStatus(_:)``, and every create, update, delete, and duplicate on
@@ -29,7 +29,7 @@ public struct AdsResource: Resource {
       "/ads/boostable", query: workspaceQuery(workspaceID), as: [BoostablePost].self)
   }
 
-  /// The Meta Ads connections in reach.
+  /// The ad connections in reach.
   public func connections(workspaceID: String? = nil) async throws -> [AdConnection] {
     try await httpGet(
       "/ads/connections", query: workspaceQuery(workspaceID), as: [AdConnection].self)
@@ -40,11 +40,25 @@ public struct AdsResource: Resource {
     try await httpGet("/ads/sources", query: workspaceQuery(workspaceID), as: [AdSource].self)
   }
 
-  /// Starts a Meta Ads connection. The caller finishes the login at the
-  /// returned URL in their own browser.
-  public func authorizeMeta(_ body: ConnectMetaAdsRequest) async throws -> MetaAdsAuthorization {
+  /// The ad networks this deployment knows, with what each one supports.
+  public func providers() async throws -> [AdProvider] {
+    try await httpGet("/ads/providers", as: [AdProvider].self)
+  }
+
+  /// Starts an ad connection on one network. The caller finishes the login at
+  /// the returned URL in their own browser.
+  public func authorize(_ provider: String, _ body: ConnectMetaAdsRequest) async throws
+    -> MetaAdsAuthorization
+  {
     try await httpPost(
-      "/ads/connections/meta/authorize", body: body, as: MetaAdsAuthorization.self)
+      "/ads/connections/\(escapePath(provider))/authorize", body: body,
+      as: MetaAdsAuthorization.self)
+  }
+
+  /// Starts a Meta Ads connection.
+  @available(*, deprecated, message: "Use authorize(\"meta\", _:).")
+  public func authorizeMeta(_ body: ConnectMetaAdsRequest) async throws -> MetaAdsAuthorization {
+    try await authorize("meta", body)
   }
 
   /// Removes a connection and every ad record created through it.
@@ -337,7 +351,149 @@ public struct AdsResource: Resource {
       query: metaQuery(workspaceID, connectionID), as: AddedAudienceUsers.self)
   }
 
-  /// How many people a targeting spec reaches, as Meta estimates it.
+  /// Adds companies to a company-list audience. The rows travel with the
+  /// request and are never stored.
+  @discardableResult
+  public func addAudienceCompanies(
+    _ id: String, companies: [AdCompany], workspaceID: String, connectionID: String
+  ) async throws -> AddedAudienceCompanies {
+    try await httpPost(
+      "/ads/audiences/\(escapePath(id))/companies",
+      body: AddAudienceCompaniesRequest(companies: companies),
+      query: metaQuery(workspaceID, connectionID), as: AddedAudienceCompanies.self)
+  }
+
+  // ─── Forecasts, conversions, and the public ad library ─────────────────
+
+  /// What the auction currently costs for that audience.
+  public func bidPricing(_ body: AdForecastRequest) async throws -> BidPricing {
+    try await httpPost("/ads/linkedin/bid-pricing", body: body, as: BidPricing.self)
+  }
+
+  /// What that audience would deliver at that budget.
+  public func supplyForecast(_ body: AdForecastRequest) async throws -> SupplyForecast {
+    try await httpPost("/ads/linkedin/supply-forecast", body: body, as: SupplyForecast.self)
+  }
+
+  /// The conversion rules on one ad account.
+  public func conversionRules(
+    adAccountID: String, connectionID: String, workspaceID: String? = nil
+  ) async throws -> [ConversionRule] {
+    var query = metaQuery(workspaceID, connectionID)
+    query.add("ad_account_id", adAccountID)
+    return try await httpGet(
+      "/ads/linkedin/conversion-rules", query: query, as: [ConversionRule].self)
+  }
+
+  /// Creates a conversion rule.
+  public func createConversionRule(_ body: CreateConversionRuleRequest) async throws
+    -> CreatedConversionRule
+  {
+    try await httpPost("/ads/linkedin/conversion-rules", body: body, as: CreatedConversionRule.self)
+  }
+
+  /// One rule, with the ad sets it is attached to.
+  public func conversionRule(
+    _ id: String, connectionID: String, workspaceID: String? = nil
+  ) async throws -> ConversionRule {
+    try await httpGet(
+      conversionRulePath(id), query: metaQuery(workspaceID, connectionID), as: ConversionRule.self)
+  }
+
+  /// Changes a rule.
+  public func updateConversionRule(
+    _ id: String, _ body: UpdateConversionRuleRequest, workspaceID: String, connectionID: String
+  ) async throws -> ConversionRule {
+    try await httpPatch(
+      conversionRulePath(id), body: body, query: metaQuery(workspaceID, connectionID),
+      as: ConversionRule.self)
+  }
+
+  /// Turns a rule off. The network keeps the history.
+  public func deleteConversionRule(
+    _ id: String, workspaceID: String, connectionID: String
+  ) async throws {
+    try await transport.send(
+      HTTPRequest(
+        method: "DELETE", path: conversionRulePath(id),
+        query: metaQuery(workspaceID, connectionID).items, unwrap: false))
+  }
+
+  /// Attaches a rule to an ad set on the same connection.
+  public func attachConversionRule(
+    _ id: String, campaignID: String, workspaceID: String, connectionID: String
+  ) async throws -> ConversionRule {
+    try await httpPost(
+      conversionRulePath(id, "/associations"),
+      body: ConversionAssociationRequest(campaignId: campaignID),
+      query: metaQuery(workspaceID, connectionID), as: ConversionRule.self)
+  }
+
+  /// Detaches a rule from an ad set.
+  public func detachConversionRule(
+    _ id: String, campaignID: String, workspaceID: String, connectionID: String
+  ) async throws -> ConversionRule {
+    try await transport.send(
+      try jsonRequest(
+        method: "DELETE", path: conversionRulePath(id, "/associations"),
+        body: ConversionAssociationRequest(campaignId: campaignID),
+        query: metaQuery(workspaceID, connectionID)),
+      as: ConversionRule.self)
+  }
+
+  /// What a rule recorded between two `YYYY-MM-DD` days, inclusive.
+  public func conversionMetrics(
+    _ id: String, since: String, until: String, connectionID: String, workspaceID: String? = nil
+  ) async throws -> ConversionMetrics {
+    var query = metaQuery(workspaceID, connectionID)
+    query.add("since", since)
+    query.add("until", until)
+    return try await httpGet(
+      conversionRulePath(id, "/metrics"), query: query, as: ConversionMetrics.self)
+  }
+
+  /// Sends conversions back to the network. Each event needs an email or a
+  /// click id; the address is hashed inside the API and nothing is stored.
+  @discardableResult
+  public func sendConversionEvents(
+    _ id: String, events: [ConversionEvent], workspaceID: String, connectionID: String
+  ) async throws -> AcceptedConversionEvents {
+    try await httpPost(
+      conversionRulePath(id, "/events"), body: ConversionEventsRequest(events: events),
+      query: metaQuery(workspaceID, connectionID), as: AcceptedConversionEvents.self)
+  }
+
+  /// The network's own public ad library, not the connection's ads.
+  public func adLibrary(_ params: AdLibraryParams) async throws -> AdLibraryPage {
+    var query = metaQuery(params.workspaceID, params.connectionID)
+    query.add("keyword", params.keyword)
+    query.add("advertiser", params.advertiser)
+    query.add("countries", params.countries?.joined(separator: ","))
+    query.add("since", params.since)
+    query.add("until", params.until)
+    query.add("cursor", params.cursor)
+    return try await httpGet("/ads/ad-library", query: query, as: AdLibraryPage.self)
+  }
+
+  private func conversionRulePath(_ id: String, _ suffix: String = "") -> String {
+    "/ads/linkedin/conversion-rules/\(escapePath(id))\(suffix)"
+  }
+
+  /// A request with a JSON body on a method the shared helpers do not carry one for.
+  private func jsonRequest(
+    method: String, path: String, body: any Encodable & Sendable, query: Query
+  ) throws -> HTTPRequest {
+    var request = HTTPRequest(method: method, path: path, query: query.items, unwrap: true)
+    do {
+      request.body = try Coding.encoder.encode(body)
+    } catch {
+      throw FoPostError.encoding(message: "Could not encode the request body: \(error)")
+    }
+    request.contentType = "application/json"
+    return request
+  }
+
+  /// How many people a targeting spec reaches, as the network estimates it.
   public func estimateReach(_ body: ReachEstimateRequest) async throws -> ReachEstimate {
     try await httpPost("/ads/reach-estimate", body: body, as: ReachEstimate.self)
   }
