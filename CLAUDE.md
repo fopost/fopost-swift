@@ -48,7 +48,7 @@ they are prefixed so a resource can define its own `get`/`delete` without
 shadowing them.
 
 Coverage: posts, workspaces, accounts, communities, labels, webhooks,
-analytics, automations, media, inbox, contacts, and ads. Inbox skips `/inbox/chat/*`
+analytics, automations, media, inbox, contacts, broadcasts, sequences, and ads. Inbox skips `/inbox/chat/*`
 (browser-encrypted X Chat) and the binary `/inbox/{id}/attachments/{index}`
 stream. Ads doc comments name the spending calls (`boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and the campaign, ad set, and network ad
@@ -72,6 +72,12 @@ Design notes worth keeping:
   `contacts.conversationAnalytics` reaches `/analytics/inbox/conversations` under the
   `analytics` scope. `UpdateContactRequest` uses double optionals so "not sent" and "sent
   as null" stay distinct — the inner nil is what clears a custom field.
+- **Broadcasts and sequences** page the same way contacts do — `{data, pagination}`,
+  decoded with `unwrap: false` — and read under the `inbox` scope. `broadcasts.send`,
+  `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` also need `publish`,
+  because they reach a platform. A recipient's `skipReason` is the messaging window's
+  record: `.windowClosed` means the network's 24-hour window had shut and nothing was
+  attempted, so a sent count lower than the audience is correct rather than a failure.
 - **Model fields are `Optional`** almost everywhere. The API omits what it has
   not computed; a non-optional field is a decode failure waiting to happen.
 - **Timestamps** parse ISO 8601 with and without fractional seconds plus a

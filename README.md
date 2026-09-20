@@ -132,6 +132,8 @@ let post = try await client.posts.create(
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
+| `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
+| `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
@@ -148,9 +150,49 @@ for try await post in client.posts.all(PostListParams(status: .published)) {
 Inbox lists return an `InboxPage<T>` instead, whose `meta` is `page`, `perPage`,
 and `total`.
 
+## Broadcasts and sequences
+
+A broadcast is one message into every conversation you already have with a segment of your contacts; a sequence is a series of them on a delay. Neither opens a cold DM.
+
+Nothing is sent into a closed messaging window: Messenger and Instagram take a business-initiated message only within 24 hours of the contact's last one, so recipients outside it come back skipped with `.windowClosed` rather than attempted. Telegram, Slack, Bluesky and Reddit have no window. The number sent is therefore often lower than the audience, and that is correct rather than a failure.
+
+```swift
+let broadcast = try await client.broadcasts.create(
+  CreateBroadcastRequest(
+    workspaceID: workspaceID,
+    accountID: accountID,
+    name: "September check-in",
+    text: "New colours just landed. Want a look?",
+    audience: AudienceFilter(platforms: ["instagram"])))
+
+// `recipients` is how many contacts matched, not how many will be messaged.
+let sent = try await client.broadcasts.send(broadcast.id)
+print(sent.recipients)
+
+// Who was skipped, and why.
+let skipped = try await client.broadcasts.recipients(broadcast.id, status: "skipped")
+for recipient in skipped.data {
+  print("\(recipient.displayName ?? "") — \(recipient.skipReason?.rawValue ?? "")")
+}
+
+let sequence = try await client.sequences.create(
+  CreateSequenceRequest(
+    workspaceID: workspaceID, accountID: accountID, name: "Welcome",
+    steps: [
+      SequenceStep(delayHours: 0, text: "Thanks for the follow — anything I can help with?"),
+      SequenceStep(delayHours: 48, text: "Here is what people usually ask us first."),
+    ]))
+
+// By id, or by the same audience filter a broadcast takes.
+_ = try await client.sequences.enroll(sequence.id, EnrollRequest(contactIDs: [contactID]))
+
+// Nothing further fires for them.
+_ = try await client.sequences.unenroll(sequence.id, [contactID])
+```
+
 ## Inbox and ads
 
-Every inbox and contacts call needs an API key with the `inbox` scope — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
+Every inbox, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
 `setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
