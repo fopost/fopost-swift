@@ -496,12 +496,15 @@ public struct DiscordChannel: Codable, Sendable, Hashable {
   public let type: Int?
   public let parentID: String?
   public let nsfw: Bool?
+  /// False when a channel permission in Discord shuts the bot out of this channel.
+  public let canPost: Bool?
   /// The channel this account posts to.
   public let isCurrent: Bool?
 
   enum CodingKeys: String, CodingKey {
     case id, name, type, nsfw
     case parentID = "parent_id"
+    case canPost = "can_post"
     case isCurrent = "is_current"
   }
 }
