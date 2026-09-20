@@ -288,3 +288,25 @@ Docs at <https://fopost.com/docs>. Questions, bugs, and feature requests go to
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+### Google Ads
+
+Campaigns, ad groups, ads, audiences, and insights are on `client.ads` and dispatch by
+connection. What only Google has is on `client.googleAds`:
+
+```swift
+let scope = GoogleAdsScope(connectionId: "c4d5e6f7-…", customerId: "1234567890")
+let keywords = try await client.googleAds.keywords(scope)
+
+try await client.googleAds.createKeyword(
+  CreateGoogleKeywordRequest(
+    scope: GoogleAdsScope(
+      workspaceId: "7d2b8c11-…", connectionId: "c4d5e6f7-…", customerId: "1234567890"),
+    adGroupId: "1234567890~adGroup~77", text: "running shoes", matchType: .exact))
+```
+
+Also `keywordIdeas`, `keywordMetrics`, `searchTerms`, `bidStrategies`, `adSchedule` and
+`setAdSchedule`, the negative keyword lists, `assets` and `assetGroups`,
+`localServicesLeads`, the conversion methods, and `query` for a raw read-only GAQL SELECT.
+Changes need the `publish` scope as well as `ads`; `customerId` has to name an account the
+connection's grant reaches.
