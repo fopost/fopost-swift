@@ -57,6 +57,7 @@ final class AccountsTests: XCTestCase {
     XCTAssertEqual(accounts.first?.platformName, "Acme")
   }
 
+
   func testCreateTelegramConnectCodeSendsTheWorkspace() async throws {
     StubURLProtocol.script([
       .json(
