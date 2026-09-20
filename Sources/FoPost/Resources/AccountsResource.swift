@@ -155,6 +155,84 @@ public struct AccountsResource: Resource {
       "/accounts/\(escapePath(id))/slack/identity", body: body, as: SlackIdentity.self)
   }
 
+  // MARK: - Meta messaging settings (Facebook Pages, Instagram)
+
+  /// The prompts shown before the first message. A network without them answers `400`.
+  public func iceBreakers(_ id: String) async throws -> MetaIceBreakers {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
+  }
+
+  /// Replaces the ice breakers, up to four.
+  public func setIceBreakers(_ id: String, _ iceBreakers: [MetaIceBreaker]) async throws
+    -> MetaIceBreakers
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers",
+      body: MetaIceBreakers(iceBreakers: iceBreakers), as: MetaIceBreakers.self)
+  }
+
+  /// Clears the ice breakers.
+  @discardableResult
+  public func deleteIceBreakers(_ id: String) async throws -> MetaIceBreakers {
+    try await httpDelete(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
+  }
+
+  /// The always-visible Messenger menu. Facebook Pages only.
+  public func persistentMenu(_ id: String) async throws -> MetaPersistentMenu {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu", as: MetaPersistentMenu.self)
+  }
+
+  /// Replaces the menu, one entry per locale, up to three items each.
+  public func setPersistentMenu(_ id: String, _ menu: [MetaPersistentMenuEntry]) async throws
+    -> MetaPersistentMenu
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu",
+      body: MetaPersistentMenu(persistentMenu: menu), as: MetaPersistentMenu.self)
+  }
+
+  /// Clears the menu.
+  @discardableResult
+  public func deletePersistentMenu(_ id: String) async throws -> MetaPersistentMenu {
+    try await httpDelete(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu", as: MetaPersistentMenu.self)
+  }
+
+  /// The text shown before a Messenger conversation starts. Facebook Pages only.
+  public func greeting(_ id: String) async throws -> MetaGreeting {
+    try await httpGet("/accounts/\(escapePath(id))/messaging/greeting", as: MetaGreeting.self)
+  }
+
+  /// Replaces the greeting, one entry per locale, each up to 160 characters.
+  public func setGreeting(_ id: String, _ greeting: [MetaGreetingText]) async throws -> MetaGreeting
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/greeting",
+      body: MetaGreeting(greeting: greeting), as: MetaGreeting.self)
+  }
+
+  /// Clears the greeting.
+  @discardableResult
+  public func deleteGreeting(_ id: String) async throws -> MetaGreeting {
+    try await httpDelete("/accounts/\(escapePath(id))/messaging/greeting", as: MetaGreeting.self)
+  }
+
+  /// What the network is delivering to the FoPost webhook for this account.
+  public func webhookSubscription(_ id: String) async throws -> WebhookSubscription {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/webhook-subscription", as: WebhookSubscription.self)
+  }
+
+  /// Subscribes to every field this account needs, lapsed or not.
+  @discardableResult
+  public func resubscribeWebhook(_ id: String) async throws -> WebhookSubscription {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/webhook-subscription", as: WebhookSubscription.self)
+  }
+
   // MARK: - Discord (bot connections)
 
   /// Text channels the bot can post to in the connected server. A 409

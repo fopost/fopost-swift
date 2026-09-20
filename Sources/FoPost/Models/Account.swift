@@ -286,6 +286,121 @@ struct CreateTelegramConnectCodeRequest: Encodable, Sendable {
   let workspaceId: String?
 }
 
+/// A tappable prompt Messenger or Instagram shows before the first message.
+public struct MetaIceBreaker: Codable, Sendable, Hashable {
+  /// Up to 80 characters.
+  public let question: String
+  /// What your webhook receives when the prompt is tapped.
+  public let payload: String
+
+  public init(question: String, payload: String) {
+    self.question = question
+    self.payload = payload
+  }
+}
+
+/// The ice breakers set on one account.
+public struct MetaIceBreakers: Codable, Sendable, Hashable {
+  public let iceBreakers: [MetaIceBreaker]
+
+  public init(iceBreakers: [MetaIceBreaker]) {
+    self.iceBreakers = iceBreakers
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case iceBreakers = "ice_breakers"
+  }
+}
+
+/// A persistent-menu item: a `postback` carrying `payload`, or a `web_url`
+/// carrying an http(s) `url`. The unused one stays nil and is not sent.
+public struct MetaMenuItem: Codable, Sendable, Hashable {
+  public let type: String
+  /// Up to 30 characters.
+  public let title: String
+  public let payload: String?
+  public let url: String?
+
+  /// An item that sends `payload` to your webhook when tapped.
+  public static func postback(title: String, payload: String) -> Self {
+    Self(type: "postback", title: title, payload: payload, url: nil)
+  }
+
+  /// An item that opens `url`.
+  public static func link(title: String, url: String) -> Self {
+    Self(type: "web_url", title: title, payload: nil, url: url)
+  }
+}
+
+/// One locale's menu; `default` is the fallback every language uses.
+public struct MetaPersistentMenuEntry: Codable, Sendable, Hashable {
+  public let locale: String
+  public let callToActions: [MetaMenuItem]
+  public let composerInputDisabled: Bool?
+
+  public init(
+    locale: String = "default",
+    callToActions: [MetaMenuItem],
+    composerInputDisabled: Bool? = nil
+  ) {
+    self.locale = locale
+    self.callToActions = callToActions
+    self.composerInputDisabled = composerInputDisabled
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case locale
+    case callToActions = "call_to_actions"
+    case composerInputDisabled = "composer_input_disabled"
+  }
+}
+
+/// The persistent menu set on one account, one entry per locale.
+public struct MetaPersistentMenu: Codable, Sendable, Hashable {
+  public let persistentMenu: [MetaPersistentMenuEntry]
+
+  public init(persistentMenu: [MetaPersistentMenuEntry]) {
+    self.persistentMenu = persistentMenu
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case persistentMenu = "persistent_menu"
+  }
+}
+
+/// One locale's greeting, up to 160 characters.
+public struct MetaGreetingText: Codable, Sendable, Hashable {
+  public let locale: String
+  public let text: String
+
+  public init(locale: String = "default", text: String) {
+    self.locale = locale
+    self.text = text
+  }
+}
+
+/// The greeting set on one account, one entry per locale.
+public struct MetaGreeting: Codable, Sendable, Hashable {
+  public let greeting: [MetaGreetingText]
+
+  public init(greeting: [MetaGreetingText]) {
+    self.greeting = greeting
+  }
+}
+
+/// What the network delivers to the FoPost webhook for one account.
+public struct WebhookSubscription: Codable, Sendable, Hashable {
+  /// False when the subscription lapsed or a required field is missing.
+  public let subscribed: Bool
+  public let fields: [String]
+  public let missingFields: [String]
+
+  enum CodingKeys: String, CodingKey {
+    case subscribed, fields
+    case missingFields = "missing_fields"
+  }
+}
+
 /// A Slack channel the app can post to.
 public struct SlackChannel: Codable, Sendable, Hashable {
   public let id: String

@@ -122,7 +122,7 @@ let post = try await client.posts.create(
 | --- | --- |
 | `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, and a Discord bot server: its channel, identity, messages, scheduled events, members and roles |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
@@ -152,7 +152,7 @@ and `total`.
 Every inbox call needs an API key with the `inbox` scope, every ads call the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
-`setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
+`setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
 reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
 duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
