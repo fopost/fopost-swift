@@ -104,6 +104,76 @@ public struct AdsResource: Resource {
     try await httpGet("/ads/targeting/search", query: params.query, as: [TargetingOption].self)
   }
 
+  /// TikTok's Business Centers. The one network-named read on this resource,
+  /// because no other network groups ad accounts this way.
+  public func tiktokBusinessCenters(connectionID: String, workspaceID: String? = nil) async throws
+    -> [AdBusinessCenter]
+  {
+    var query = Query()
+    query.add("workspace_id", workspaceID)
+    query.add("connection_id", connectionID)
+    return try await httpGet(
+      "/ads/tiktok/business-centers", query: query, as: [AdBusinessCenter].self)
+  }
+
+  /// The accounts an ad can run as; an identity id is a `pageId`.
+  public func tiktokIdentities(
+    connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> [AdIdentity] {
+    var query = Query()
+    query.add("workspace_id", workspaceID)
+    query.add("connection_id", connectionID)
+    query.add("ad_account_id", adAccountID)
+    return try await httpGet("/ads/tiktok/identities", query: query, as: [AdIdentity].self)
+  }
+
+  /// Posts already live under an identity, each a candidate Spark ad.
+  public func sparkPosts(_ params: SparkPostsParams) async throws -> [SparkPost] {
+    try await httpGet("/ads/spark-posts", query: params.query, as: [SparkPost].self)
+  }
+
+  /// Offline conversions against a pixel the ad account owns. Identifiers are
+  /// hashed before anything leaves FoPost.
+  public func uploadConversions(_ body: UploadConversionsRequest) async throws
+    -> ConversionsAccepted
+  {
+    try await httpPost("/ads/conversions", body: body, as: ConversionsAccepted.self)
+  }
+
+  /// One page of an ad's comments. Pass `nextCursor` back as `after`.
+  public func comments(_ params: AdCommentsParams) async throws -> AdCommentsPage {
+    try await httpGet("/ads/comments", query: params.query, as: AdCommentsPage.self)
+  }
+
+  /// Answers a comment on an ad. Needs the `publish` scope as well as `ads`.
+  public func replyToComment(_ commentID: String, _ body: AdCommentRequest) async throws
+    -> AdCommentReply
+  {
+    try await httpPost(
+      "/ads/comments/\(escapePath(commentID))/reply", body: body, as: AdCommentReply.self)
+  }
+
+  /// Hides or shows a comment on an ad. Needs the `publish` scope as well as
+  /// `ads`.
+  @discardableResult
+  public func setCommentHidden(_ commentID: String, _ body: AdCommentRequest) async throws
+    -> MessageResponse
+  {
+    try await httpPost(
+      "/ads/comments/\(escapePath(commentID))/hide", body: body, unwrap: false,
+      as: MessageResponse.self)
+  }
+
+  /// Removes a comment from the ad on the network. One already gone succeeds.
+  /// Needs the `publish` scope as well as `ads`.
+  @discardableResult
+  public func deleteComment(_ commentID: String, _ body: AdCommentRequest) async throws
+    -> MessageResponse
+  {
+    try await httpDelete(
+      "/ads/comments/\(escapePath(commentID))", body: body, as: MessageResponse.self)
+  }
+
   /// Each connection's Page with its Instant Forms.
   public func leadForms(workspaceID: String? = nil) async throws -> [LeadFormSource] {
     try await httpGet(
