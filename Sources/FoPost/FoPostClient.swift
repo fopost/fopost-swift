@@ -74,6 +74,9 @@ public final class FoPostClient: Sendable {
   public var communities: CommunitiesResource { CommunitiesResource(transport: transport) }
   /// Labels, the campaign tags posts are grouped by.
   public var labels: LabelsResource { LabelsResource(transport: transport) }
+
+  /// What happened in a workspace, and the security audit log.
+  public var activity: ActivityResource { ActivityResource(transport: transport) }
   /// Outbound webhooks, the push counterpart to polling a post's deliveries.
   public var webhooks: WebhooksResource { WebhooksResource(transport: transport) }
   /// The cross-account reporting surface.
@@ -84,6 +87,17 @@ public final class FoPostClient: Sendable {
   public var media: MediaResource { MediaResource(transport: transport) }
   /// Comments, mentions, and direct messages on connected accounts.
   public var inbox: InboxResource { InboxResource(transport: transport) }
+
+  /// The people behind that inbox, and the fields a workspace keeps about them.
+  public var contacts: ContactsResource { ContactsResource(transport: transport) }
+
+  /// One message into every conversation the workspace already has with a
+  /// segment of its contacts.
+  public var broadcasts: BroadcastsResource { BroadcastsResource(transport: transport) }
+  /// A series of messages on a delay, walked per enrolled contact.
+  public var sequences: SequencesResource { SequencesResource(transport: transport) }
+  /// The workspace knowledge base, which grounds drafted replies.
+  public var knowledge: KnowledgeResource { KnowledgeResource(transport: transport) }
   /// Boosts, ads, audiences, and lead forms on a Meta Ads connection.
   public var ads: AdsResource { AdsResource(transport: transport) }
   /// Content, length, and media checks that create nothing.

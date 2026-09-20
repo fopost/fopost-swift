@@ -324,7 +324,8 @@ final class AdsTests: XCTestCase {
     XCTAssertEqual(page.backfilled, 7)
 
     StubURLProtocol.script([.json(#"{"message":"Unsubscribed"}"#)])
-    _ = try await client.ads.unsubscribeLeadPage("1234", workspaceID: "ws_1", connectionID: "conn_1")
+    _ = try await client.ads.unsubscribeLeadPage(
+      "1234", workspaceID: "ws_1", connectionID: "conn_1")
     request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.method, "DELETE")
     XCTAssertEqual(request.path, "/v1/ads/lead-pages/1234")
