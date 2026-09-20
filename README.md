@@ -127,7 +127,7 @@ let post = try await client.posts.create(
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
 | `client.webhooks` | Outbound event subscriptions |
-| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection |
+| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost |
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
@@ -189,6 +189,43 @@ let length = try await client.validate.length(
     ValidateLengthRequest(text: "Ship day", platforms: [.twitter]))
 let media = try await client.validate.media(
     ValidateMediaRequest(url: "https://yourbrand.com/chart.png"))
+```
+
+## Analytics
+
+```swift
+// How long a post keeps earning, from the repeated readings of each post
+let decay = try await client.analytics.decay(AnalyticsParams(days: 30))
+print(decay.halfLifeBucket ?? "")  // e.g. "1h_3h"
+
+// Whether posting more earned more
+let cadence = try await client.analytics.frequency(AnalyticsParams(days: 90))
+print(cadence.best?.label ?? "")  // e.g. "3-5 a week"
+
+// Every reading held for one post, with what moved between them
+let timeline = try await client.analytics.timeline(post.id)
+
+// Mirror the metrics into your own store, without refetching everything
+var cursor: String?
+while true {
+  let page = try await client.analytics.changes(MetricChangesParams(since: cursor))
+  save(page.changes ?? [])
+  guard page.hasMore == true, let next = page.cursor else { break }
+  cursor = next
+}
+
+// Refresh one post now instead of waiting for the next collection run
+try await client.analytics.collectPost(post.id)
+
+// Posts on the account that never went out through FoPost
+let native = try await client.analytics.nativePosts(accountID: accounts[0].id)
+```
+
+A post is addressed by its FoPost id or by its permalink, so a post made by
+hand on the network works the same way:
+
+```swift
+try await client.analytics.timeline("https://x.com/acme/status/1")
 ```
 
 ## Error handling
