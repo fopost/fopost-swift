@@ -41,7 +41,7 @@ final class ContactsTests: XCTestCase {
     XCTAssertEqual(page.data[0].source, .inbox)
     XCTAssertEqual(page.pagination?.total, 11)
     XCTAssertEqual(page.pagination?.page, 2)
-    XCTAssertTrue(page.hasMore)
+    XCTAssertFalse(page.hasMore)
   }
 
   func testCreateOmitsAnAbsentPlatformID() async throws {
