@@ -103,6 +103,11 @@ public final class FoPostClient: Sendable {
   /// Content, length, and media checks that create nothing.
   public var validate: ValidateResource { ValidateResource(transport: transport) }
 
+  /// Manage a connected Google Business Profile location.
+  public var googleBusiness: GoogleBusinessResource {
+    GoogleBusinessResource(transport: transport)
+  }
+
   // MARK: - Escape hatch
 
   /// Sends an authenticated request to an endpoint the SDK does not wrap yet

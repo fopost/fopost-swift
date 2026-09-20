@@ -138,6 +138,7 @@ let post = try await client.posts.create(
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
+| `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
@@ -271,6 +272,22 @@ try await client.contacts.deleteField(field.id)   // removes every answer to it
 // Volume and median reply time per thread. Needs the `analytics` scope.
 let report = try await client.contacts.conversationAnalytics(days: 30, sort: "slowest")
 ```
+
+## Google Business Profile
+
+```swift
+let location = try await client.googleBusiness.location(accountID)
+try await client.googleBusiness.updateLocation(
+  accountID, fields: ["title": .string("Corner Bakery")])
+
+// Photos come from your media library, JPEG or PNG.
+try await client.googleBusiness.addMedia(accountID, mediaID: mediaID, category: "INTERIOR")
+
+let metrics = try await client.googleBusiness.performance(
+  accountID, startDate: "2026-09-01", endDate: "2026-09-30")
+```
+
+Responses relay Google's own shape as `JSONValue`. Reads need the `accounts` scope, writes `publish` as well. Every call throws a 503 `configuration_error` until Google grants the deployment Business Profile API access.
 
 ## Validation
 
