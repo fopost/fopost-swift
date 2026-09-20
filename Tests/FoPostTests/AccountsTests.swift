@@ -57,7 +57,6 @@ final class AccountsTests: XCTestCase {
     XCTAssertEqual(accounts.first?.platformName, "Acme")
   }
 
-
   func testCreateTelegramConnectCodeSendsTheWorkspace() async throws {
     StubURLProtocol.script([
       .json(
@@ -165,6 +164,126 @@ final class AccountsTests: XCTestCase {
 
     do {
       _ = try await client.accounts.slackChannels("acc_1")
+      XCTFail("expected an error")
+    } catch let error as FoPostError {
+      guard case .conflict = error else { return XCTFail("expected a conflict") }
+      XCTAssertEqual(error.code, "webhook_connection")
+    }
+  }
+
+  // MARK: - Discord
+
+  func testDiscordChannelsAndTheChannelSwitch() async throws {
+    StubURLProtocol.script([
+      .json(
+        "{\"data\":[{\"id\":\"c2\",\"name\":\"launches\",\"type\":0,"
+          + "\"parent_id\":null,\"nsfw\":false,\"is_current\":true}]}"),
+      .json("{\"data\":{\"id\":\"c2\",\"name\":\"launches\",\"is_current\":true}}"),
+    ])
+    let client = try makeStubClient()
+
+    let channels = try await client.accounts.discordChannels("acc_1")
+    XCTAssertEqual(StubURLProtocol.requests[0].path, "/v1/accounts/acc_1/discord/channels")
+    XCTAssertEqual(channels.first?.isCurrent, true)
+
+    _ = try await client.accounts.switchDiscordChannel("acc_1", channelID: "c2")
+    let patch = StubURLProtocol.requests[1]
+    XCTAssertEqual(patch.method, "PATCH")
+    XCTAssertEqual(patch.path, "/v1/accounts/acc_1/discord/channels/current")
+    XCTAssertEqual(try patch.bodyJSON()["channel_id"] as? String, "c2")
+  }
+
+  func testUpdateDiscordIdentityOmitsUnsetFields() async throws {
+    StubURLProtocol.script([
+      .json("{\"data\":{\"username\":\"Release Bot\",\"avatar_url\":null}}")
+    ])
+    let client = try makeStubClient()
+
+    let updated = try await client.accounts.updateDiscordIdentity(
+      "acc_1", UpdateDiscordIdentityRequest(username: "Release Bot"))
+
+    let patch = StubURLProtocol.requests[0]
+    XCTAssertEqual(patch.method, "PATCH")
+    XCTAssertEqual(patch.path, "/v1/accounts/acc_1/discord/identity")
+    let body = try patch.bodyJSON()
+    XCTAssertEqual(body["username"] as? String, "Release Bot")
+    // An unset field never reaches the wire, so Discord keeps it.
+    XCTAssertNil(body["avatar_url"])
+    XCTAssertEqual(updated.username, "Release Bot")
+  }
+
+  func testDiscordScheduledEventRoundTrips() async throws {
+    let event =
+      "{\"id\":\"e1\",\"name\":\"Launch stream\",\"description\":null,"
+      + "\"channel_id\":null,\"location\":\"https://example.com/live\","
+      + "\"start_time\":\"2026-10-01T18:00:00.000Z\","
+      + "\"end_time\":\"2026-10-01T19:00:00.000Z\",\"status\":\"scheduled\",\"user_count\":0}"
+    StubURLProtocol.script([
+      .json("{\"data\":\(event)}", status: 201),
+      .json("{\"data\":[\(event)]}"),
+      .json("{\"data\":{\"id\":\"e1\",\"name\":\"Launch stream\",\"status\":\"canceled\"}}"),
+      .json("{\"data\":{\"deleted\":true}}"),
+    ])
+    let client = try makeStubClient()
+
+    let created = try await client.accounts.createDiscordEvent(
+      "acc_1",
+      DiscordEventRequest(
+        name: "Launch stream",
+        startTime: "2026-10-01T18:00:00.000Z",
+        endTime: "2026-10-01T19:00:00.000Z",
+        location: "https://example.com/live"))
+    XCTAssertEqual(created.id, "e1")
+    XCTAssertEqual(StubURLProtocol.requests[0].path, "/v1/accounts/acc_1/discord/events")
+
+    let listed = try await client.accounts.discordEvents("acc_1")
+    XCTAssertEqual(listed.count, 1)
+
+    let updated = try await client.accounts.updateDiscordEvent(
+      "acc_1", eventID: "e1", DiscordEventRequest(status: "canceled"))
+    XCTAssertEqual(updated.status, "canceled")
+    XCTAssertEqual(try StubURLProtocol.requests[2].bodyJSON()["status"] as? String, "canceled")
+
+    let ack = try await client.accounts.deleteDiscordEvent("acc_1", eventID: "e1")
+    XCTAssertEqual(ack.deleted, true)
+    XCTAssertEqual(StubURLProtocol.requests[3].path, "/v1/accounts/acc_1/discord/events/e1")
+  }
+
+  func testDiscordMembersRolesAndDirectMessages() async throws {
+    StubURLProtocol.script([
+      .json(
+        "{\"data\":[{\"id\":\"u7\",\"username\":\"ada\",\"is_bot\":false,"
+          + "\"roles\":[\"r1\"]}]}"),
+      .json("{\"data\":{\"assigned\":true}}"),
+      .json("{\"data\":{\"id\":\"m1\",\"channel_id\":\"dm1\"}}", status: 201),
+    ])
+    let client = try makeStubClient()
+
+    let members = try await client.accounts.discordMembers("acc_1", query: "ada")
+    XCTAssertEqual(members.first?.roles, ["r1"])
+    XCTAssertTrue(StubURLProtocol.requests[0].url.query?.contains("q=ada") == true)
+
+    let assigned = try await client.accounts.addDiscordMemberRole(
+      "acc_1", roleID: "r1", memberID: "u7")
+    XCTAssertEqual(assigned.assigned, true)
+    XCTAssertEqual(StubURLProtocol.requests[1].method, "PUT")
+    XCTAssertEqual(
+      StubURLProtocol.requests[1].path, "/v1/accounts/acc_1/discord/roles/r1/members/u7")
+
+    let sent = try await client.accounts.sendDiscordDirectMessage(
+      "acc_1", memberID: "u7", content: "hi")
+    XCTAssertEqual(sent.channelID, "dm1")
+    XCTAssertEqual(try StubURLProtocol.requests[2].bodyJSON()["member_id"] as? String, "u7")
+  }
+
+  func testDiscordWebhookConnectionSurfacesAsConflict() async throws {
+    StubURLProtocol.script([
+      .json("{\"error\":\"webhook_connection\",\"message\":\"Upgrade it\"}", status: 409)
+    ])
+    let client = try makeStubClient()
+
+    do {
+      _ = try await client.accounts.discordChannels("acc_1")
       XCTFail("expected an error")
     } catch let error as FoPostError {
       guard case .conflict = error else { return XCTFail("expected a conflict") }
