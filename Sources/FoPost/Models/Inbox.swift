@@ -306,6 +306,19 @@ public struct InboxTypingResult: Codable, Sendable, Hashable {
   public let typing: Bool?
 }
 
+/// The outcome of ``InboxResource/handover(conversationID:accountID:appID:metadata:)``.
+public struct InboxHandover: Codable, Sendable, Hashable {
+  /// The app control went to, or nil when it was taken back.
+  public let appID: String?
+  /// `passed` or `taken`.
+  public let control: String
+
+  enum CodingKeys: String, CodingKey {
+    case appID = "app_id"
+    case control
+  }
+}
+
 /// How many items ``InboxResource/markThreadRead(_:)`` settled.
 public struct InboxReadResult: Codable, Sendable, Hashable {
   public let updated: Int?
@@ -576,6 +589,18 @@ struct InboxTypingRequest: Codable, Sendable {
   enum CodingKeys: String, CodingKey {
     case accountID = "account_id"
     case on
+  }
+}
+
+struct InboxHandoverRequest: Codable, Sendable {
+  var accountID: String
+  var appID: String?
+  var metadata: String?
+
+  enum CodingKeys: String, CodingKey {
+    case accountID = "account_id"
+    case appID = "app_id"
+    case metadata
   }
 }
 
