@@ -412,4 +412,174 @@ public struct AccountsResource: Resource {
   private func memberRolePath(_ id: String, _ roleID: String, _ memberID: String) -> String {
     discordPath(id, "/roles/\(escapePath(roleID))/members/\(escapePath(memberID))")
   }
+  // MARK: - Per-network extras
+
+  /// Boards this Pinterest connection can pin to.
+  public func pinterestBoards(_ id: String) async throws -> [PinterestBoard] {
+    try await httpGet("/accounts/\(escapePath(id))/pinterest/boards", as: [PinterestBoard].self)
+  }
+
+  /// Creates a board on the connected Pinterest account.
+  public func createPinterestBoard(_ id: String, _ body: CreatePinterestBoardRequest) async throws
+    -> PinterestBoard
+  {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/pinterest/boards", body: body, as: PinterestBoard.self)
+  }
+
+  /// The channel's own playlists, with the stored default marked.
+  public func youtubePlaylists(_ id: String) async throws -> [YouTubePlaylist] {
+    try await httpGet("/accounts/\(escapePath(id))/youtube/playlists", as: [YouTubePlaylist].self)
+  }
+
+  /// Creates a playlist on the connected channel.
+  public func createYouTubePlaylist(_ id: String, _ body: CreateYouTubePlaylistRequest)
+    async throws -> YouTubePlaylist
+  {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/youtube/playlists", body: body, as: YouTubePlaylist.self)
+  }
+
+  /// The playlist a new video joins when the post picks none. `nil` clears it.
+  @discardableResult
+  public func setDefaultYouTubePlaylist(_ id: String, playlistID: String?) async throws -> String? {
+    struct Body: Encodable, Sendable {
+      let playlistID: String?
+      enum CodingKeys: String, CodingKey { case playlistID = "playlist_id" }
+      func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        // An explicit null is what clears the stored default.
+        try container.encode(playlistID, forKey: .playlistID)
+      }
+    }
+    struct Stored: Decodable, Sendable {
+      let playlistID: String?
+      enum CodingKeys: String, CodingKey { case playlistID = "playlist_id" }
+    }
+    let stored: Stored = try await httpPut(
+      "/accounts/\(escapePath(id))/youtube/playlists/default", body: Body(playlistID: playlistID),
+      as: Stored.self)
+    return stored.playlistID
+  }
+
+  /// Caption tracks on one of the channel's videos.
+  public func youtubeCaptions(_ id: String, videoID: String) async throws -> [YouTubeCaptionTrack] {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/youtube/videos/\(escapePath(videoID))/captions",
+      as: [YouTubeCaptionTrack].self)
+  }
+
+  /// Uploads a caption track to a video.
+  public func uploadYouTubeCaptions(
+    _ id: String, videoID: String, _ body: UploadYouTubeCaptionsRequest
+  ) async throws -> YouTubeCaptionTrack {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/youtube/videos/\(escapePath(videoID))/captions", body: body,
+      as: YouTubeCaptionTrack.self)
+  }
+
+  /// One caption track read back as text.
+  public func youtubeTranscript(_ id: String, captionID: String) async throws -> YouTubeTranscript {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/youtube/captions/\(escapePath(captionID))",
+      as: YouTubeTranscript.self)
+  }
+
+  /// What a post from this Bluesky connection is written in when it does not say.
+  public func blueskyLanguages(_ id: String) async throws -> BlueskyLanguages {
+    try await httpGet("/accounts/\(escapePath(id))/bluesky/languages", as: BlueskyLanguages.self)
+  }
+
+  /// Stores up to three BCP-47 tags. An empty array clears the default.
+  @discardableResult
+  public func setBlueskyLanguages(_ id: String, _ languages: [String]) async throws
+    -> BlueskyLanguages
+  {
+    struct Body: Encodable, Sendable { let languages: [String] }
+    return try await httpPut(
+      "/accounts/\(escapePath(id))/bluesky/languages", body: Body(languages: languages),
+      as: BlueskyLanguages.self)
+  }
+
+  /// The switches TikTok enforces at publish time, changed in the TikTok app.
+  public func tiktokCreatorInfo(_ id: String) async throws -> TikTokCreatorInfo {
+    try await httpGet("/accounts/\(escapePath(id))/tiktok/creator-info", as: TikTokCreatorInfo.self)
+  }
+
+  /// TikTok's Commercial Music Library. Needs the Marketing API product on the
+  /// TikTok app; without it the call throws rather than answering an empty list.
+  public func tiktokMusic(_ id: String, query: String, limit: Int? = nil) async throws
+    -> [TikTokMusic]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("limit", limit)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/tiktok/music", query: items, as: [TikTokMusic].self)
+  }
+
+  /// Places a post can be tagged with. Same TikTok product as the music library.
+  public func tiktokLocations(_ id: String, query: String, limit: Int? = nil) async throws
+    -> [TikTokPlace]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("limit", limit)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/tiktok/locations", query: items, as: [TikTokPlace].self)
+  }
+
+  /// Resolves a share link to one of this account's own videos, for repurposing.
+  public func tiktokVideoLookup(_ id: String, url: String) async throws -> TikTokVideoSource {
+    struct Body: Encodable, Sendable { let url: String }
+    return try await httpPost(
+      "/accounts/\(escapePath(id))/tiktok/video-download", body: Body(url: url),
+      as: TikTokVideoSource.self)
+  }
+
+  /// Tracks a Reel can carry. With no query Instagram answers with what is trending.
+  public func instagramAudio(_ id: String, query: String? = nil, audioType: String? = nil)
+    async throws -> [InstagramAudio]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("audio_type", audioType)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/audio", query: items, as: [InstagramAudio].self)
+  }
+
+  /// How many posts are left before Instagram refuses the next one.
+  public func instagramPublishingLimit(_ id: String) async throws -> InstagramPublishingLimit {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/publishing-limit", as: InstagramPublishingLimit.self)
+  }
+
+  /// Stories still inside their 24 hours, posted through FoPost or not. Asking
+  /// for insights costs one extra call per story.
+  public func instagramStories(_ id: String, insights: Bool = false) async throws
+    -> [InstagramStory]
+  {
+    var items = Query()
+    if insights { items.add("insights", true) }
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/stories", query: items, as: [InstagramStory].self)
+  }
+
+  /// The insight set for one story.
+  public func instagramStoryInsights(_ id: String, storyID: String) async throws
+    -> InstagramStoryInsights
+  {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/stories/\(escapePath(storyID))/insights",
+      as: InstagramStoryInsights.self)
+  }
+
+  /// Organizations a LinkedIn post can mention. People are not searchable:
+  /// LinkedIn has no public person search.
+  public func linkedinMentions(_ id: String, query: String) async throws -> [LinkedInMention] {
+    var items = Query()
+    items.add("q", query)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/linkedin/mentions", query: items, as: [LinkedInMention].self)
+  }
 }
