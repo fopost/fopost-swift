@@ -134,7 +134,7 @@ let post = try await client.posts.create(
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
-| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
+| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
