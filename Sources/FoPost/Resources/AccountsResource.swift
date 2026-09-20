@@ -64,6 +64,20 @@ public struct AccountsResource: Resource {
       "/accounts/\(escapePath(id))/health", query: query, as: AccountHealth.self)
   }
 
+  /// The numbers only this account's network reports, in its own vocabulary:
+  /// ad-break earnings, story taps, a retention curve, the search terms behind a
+  /// listing. Keyed by the platform's own metric names, read from the newest
+  /// collected snapshot rather than fetched live. Needs the `analytics` scope.
+  ///
+  /// A network whose metric access has not been granted yet answers `503`
+  /// (`platform_metrics_unavailable`) rather than an empty set.
+  public func platformMetrics(_ id: String) async throws -> AccountPlatformMetrics {
+    var query = Query()
+    query.add("raw", true)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/insights", query: query, as: AccountPlatformMetrics.self)
+  }
+
   /// The health of every account, optionally narrowed to one workspace.
   public func healthSummary(workspaceID: String? = nil) async throws -> HealthSummary {
     var query = Query()

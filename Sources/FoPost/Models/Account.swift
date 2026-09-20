@@ -438,6 +438,51 @@ public struct SlackMember: Codable, Sendable, Hashable {
 }
 
 /// The name and icon a Slack account posts under.
+/// One metric a network reports under its own name.
+///
+/// ``key`` is the platform's own name and is stable; ``label`` is ours and may
+/// be reworded, so match on the key. ``value`` is a number for every ``kind``
+/// but `series`, which is an array of points.
+public struct PlatformMetricRow: Codable, Sendable, Hashable {
+  public let key: String
+  public let label: String
+  /// One of `count`, `duration_ms`, `currency_usd`, `ratio`, `series`.
+  public let kind: String
+  public let value: JSONValue
+
+  /// The value as a number, or nil for a series or a non-numeric answer.
+  public var number: Double? { value.doubleValue }
+}
+
+/// One side of a per-network metric set: the account itself, or its newest
+/// measured post. ``externalPostID`` is nil on the account side.
+public struct PlatformMetricsBlock: Codable, Sendable, Hashable {
+  public let fetchedAt: String?
+  public let externalPostID: String?
+  public let metrics: [PlatformMetricRow]
+
+  enum CodingKeys: String, CodingKey {
+    case fetchedAt = "fetched_at"
+    case externalPostID = "external_post_id"
+    case metrics
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    fetchedAt = try container.decodeIfPresent(String.self, forKey: .fetchedAt)
+    externalPostID = try container.decodeIfPresent(String.self, forKey: .externalPostID)
+    metrics = try container.decodeIfPresent([PlatformMetricRow].self, forKey: .metrics) ?? []
+  }
+}
+
+/// What only this network reports, in its own vocabulary: ad-break earnings,
+/// story taps, a retention curve, the search terms behind a listing.
+public struct AccountPlatformMetrics: Codable, Sendable, Hashable {
+  public let platform: String?
+  public let account: PlatformMetricsBlock
+  public let post: PlatformMetricsBlock
+}
+
 public struct SlackIdentity: Codable, Sendable, Hashable {
   /// Nil posts under the app name.
   public let username: String?
