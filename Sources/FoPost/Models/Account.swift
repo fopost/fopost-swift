@@ -15,6 +15,9 @@ public struct Account: Codable, Sendable, Hashable {
   public let active: Bool?
   public let healthStatus: AccountHealthStatus?
   public let lastHealthCheck: Date?
+  /// True when the account was connected before FoPost asked for a permission
+  /// it now needs. Reconnecting it is the fix.
+  public let reconnectRequired: Bool?
 }
 
 /// The workspace an account detail response names.
@@ -366,4 +369,69 @@ public struct UpdateSlackIdentityRequest: Encodable, Sendable {
     if let iconURL { try container.encode(iconURL, forKey: .iconURL) }
     if let iconEmoji { try container.encode(iconEmoji, forKey: .iconEmoji) }
   }
+}
+
+/// A subreddit a Reddit account can post to.
+public struct RedditSubreddit: Codable, Sendable, Hashable {
+  /// The subreddit name, without the `r/` prefix.
+  public let name: String
+  public let title: String?
+  public let subscribers: Int?
+  public let over18: Bool?
+  /// Whether this account may submit here, rather than only read.
+  public let canPost: Bool?
+  /// Whether the subreddit offers post flairs.
+  public let flairEnabled: Bool?
+  public let iconUrl: String?
+  /// The subreddit posts go to when a post names none.
+  public let isDefault: Bool?
+}
+
+/// One rule a subreddit publishes.
+public struct RedditSubredditRule: Codable, Sendable, Hashable {
+  public let name: String?
+  public let description: String?
+  /// What the rule covers: `link`, `comment`, or `all`.
+  public let appliesTo: String?
+}
+
+/// The rules of one subreddit.
+public struct RedditSubredditRules: Codable, Sendable, Hashable {
+  public let subreddit: String?
+  public let rules: [RedditSubredditRule]?
+}
+
+/// A post flair a subreddit offers. The id is valid only in that subreddit.
+public struct RedditFlair: Codable, Sendable, Hashable {
+  public let id: String
+  public let text: String?
+  /// Whether the label may be replaced with your own text.
+  public let editable: Bool?
+}
+
+/// The post flairs of one subreddit.
+public struct RedditFlairs: Codable, Sendable, Hashable {
+  public let subreddit: String?
+  public let flairs: [RedditFlair]?
+}
+
+/// Where a Reddit account's posts go when a post names no subreddit. A nil
+/// `subreddit` falls back to the account's own profile page.
+public struct RedditDefaultSubredditRequest: Codable, Sendable, Hashable {
+  public var subreddit: String?
+
+  public init(subreddit: String?) {
+    self.subreddit = subreddit
+  }
+
+  // Encoded by hand so a nil is sent as null, not dropped.
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(subreddit, forKey: .subreddit)
+  }
+}
+
+/// The default subreddit now in effect.
+public struct RedditDefaultSubreddit: Codable, Sendable, Hashable {
+  public let subreddit: String?
 }

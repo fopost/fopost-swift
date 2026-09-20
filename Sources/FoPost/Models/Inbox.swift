@@ -166,6 +166,8 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let canReply: Bool?
   public let hidden: Bool?
   public let liked: Bool?
+  /// How we voted, where the platform ranks by votes: `up` or `down`.
+  public let vote: String?
   public let pinned: Bool?
   /// Our reaction on a DM.
   public let reaction: String?
@@ -174,6 +176,8 @@ public struct InboxItem: Codable, Sendable, Hashable {
   /// A comment someone left, or our own reply.
   public let canDelete: Bool?
   public let canLike: Bool?
+  /// Up and down votes, where the platform ranks by them.
+  public let canVote: Bool?
   /// Our own comment only.
   public let canPin: Bool?
   /// Our own comment only.
@@ -557,6 +561,10 @@ struct InboxReplyRequest: Codable, Sendable {
 
 struct EditInboxCommentRequest: Codable, Sendable {
   var text: String
+}
+
+struct InboxVoteRequest: Codable, Sendable {
+  var direction: String
 }
 
 struct ReactInboxItemRequest: Codable, Sendable {

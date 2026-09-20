@@ -129,6 +129,49 @@ public struct AccountsResource: Resource {
       "/accounts/\(escapePath(id))/telegram/commands", as: TelegramBotCommands.self)
   }
 
+  /// Subreddits a Reddit account is subscribed to, busiest first, plus its own
+  /// profile page. ``RedditSubreddit/canPost`` is false where the account may
+  /// read but not submit, and ``RedditSubreddit/isDefault`` marks the subreddit
+  /// posts go to when a post names none. A 409 `reconnect_required` means the
+  /// account has to be reconnected first; the same applies to the other Reddit
+  /// calls.
+  public func redditSubreddits(_ id: String) async throws -> [RedditSubreddit] {
+    try await httpGet("/accounts/\(escapePath(id))/reddit/subreddits", as: [RedditSubreddit].self)
+  }
+
+  /// The rules a subreddit publishes, in its own order. `subreddit` carries no
+  /// `r/` prefix.
+  public func redditSubredditRules(_ id: String, subreddit: String) async throws
+    -> [RedditSubredditRule]
+  {
+    let wrapper = try await httpGet(
+      "/accounts/\(escapePath(id))/reddit/subreddits/\(escapePath(subreddit))/rules",
+      as: RedditSubredditRules.self)
+    return wrapper.rules ?? []
+  }
+
+  /// Post flairs one subreddit offers. A flair id is valid only in the
+  /// subreddit it came from: pass it as `flair_id` in the post's Reddit
+  /// platform settings, and preflight rejects an id from anywhere else.
+  public func redditFlairs(_ id: String, subreddit: String) async throws -> [RedditFlair] {
+    let wrapper = try await httpGet(
+      "/accounts/\(escapePath(id))/reddit/flairs",
+      query: Query(["subreddit": subreddit]),
+      as: RedditFlairs.self)
+    return wrapper.flairs ?? []
+  }
+
+  /// Sets where a Reddit account's posts go when a post names no subreddit.
+  /// Passing nil falls back to the account's own profile page, which always
+  /// takes a post. Returns the subreddit now in effect.
+  public func setRedditDefaultSubreddit(_ id: String, subreddit: String?) async throws -> String? {
+    let result = try await httpPut(
+      "/accounts/\(escapePath(id))/reddit/default-subreddit",
+      body: RedditDefaultSubredditRequest(subreddit: subreddit),
+      as: RedditDefaultSubreddit.self)
+    return result.subreddit
+  }
+
   /// Channels the Slack app can post to: every public channel, and private
   /// ones the app was invited to. A 409 `webhook_connection` means the account
   /// posts through a webhook.
