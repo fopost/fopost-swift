@@ -84,6 +84,9 @@ public final class FoPostClient: Sendable {
   public var media: MediaResource { MediaResource(transport: transport) }
   /// Comments, mentions, and direct messages on connected accounts.
   public var inbox: InboxResource { InboxResource(transport: transport) }
+
+  /// The workspace knowledge base, which grounds drafted replies.
+  public var knowledge: KnowledgeResource { KnowledgeResource(transport: transport) }
   /// Boosts, ads, audiences, and lead forms on a Meta Ads connection.
   public var ads: AdsResource { AdsResource(transport: transport) }
   /// Content, length, and media checks that create nothing.

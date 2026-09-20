@@ -19,8 +19,13 @@ final class MetaMessagingTests: XCTestCase {
       "acc_1", [MetaIceBreaker(question: "Hours?", payload: "HOURS")])
     let put = StubURLProtocol.requests[1]
     XCTAssertEqual(put.method, "PUT")
-    XCTAssertEqual(
-      put.bodyString, "{\"ice_breakers\":[{\"question\":\"Hours?\",\"payload\":\"HOURS\"}]}")
+    // Compared field by field, not as a JSON string: the encoder gives no
+    // ordering guarantee across a multi-key object, so a string comparison
+    // here passes or fails on the run rather than on the body.
+    let breakers = try XCTUnwrap(try put.bodyJSON()["ice_breakers"] as? [[String: Any]])
+    XCTAssertEqual(breakers.count, 1)
+    XCTAssertEqual(breakers.first?["question"] as? String, "Hours?")
+    XCTAssertEqual(breakers.first?["payload"] as? String, "HOURS")
 
     let cleared = try await client.accounts.deleteIceBreakers("acc_1")
     XCTAssertEqual(StubURLProtocol.requests[2].method, "DELETE")
@@ -62,7 +67,10 @@ final class MetaMessagingTests: XCTestCase {
     let saved = try await client.accounts.setGreeting("acc_1", [MetaGreetingText(text: "Hi!")])
 
     let put = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(put.bodyString, "{\"greeting\":[{\"locale\":\"default\",\"text\":\"Hi!\"}]}")
+    let greeting = try XCTUnwrap(try put.bodyJSON()["greeting"] as? [[String: Any]])
+    XCTAssertEqual(greeting.count, 1)
+    XCTAssertEqual(greeting.first?["text"] as? String, "Hi!")
+    XCTAssertEqual(greeting.first?["locale"] as? String, "default")
     XCTAssertEqual(saved.greeting.first?.locale, "default")
   }
 

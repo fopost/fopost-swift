@@ -132,6 +132,7 @@ let post = try await client.posts.create(
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
+| `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
@@ -149,8 +150,8 @@ and `total`.
 
 ## Inbox and ads
 
-Every inbox call needs an API key with the `inbox` scope, every ads call the
-`ads` scope. The inbox calls that act on the platform as the account,
+Every inbox call needs an API key with the `inbox` scope, which also covers
+`client.knowledge`; every ads call needs the `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
 `setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
 reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
