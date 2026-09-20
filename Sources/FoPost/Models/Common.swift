@@ -310,13 +310,14 @@ public struct Platform: FoPostStringEnum {
   public static let nostr: Self = "nostr"
   public static let whop: Self = "whop"
   public static let skool: Self = "skool"
+  public static let whatsapp: Self = "whatsapp"
 
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .twitter, .instagram, .instagramBusiness, .facebook, .linkedin, .tiktok, .youtube, .bluesky,
     .threads, .mastodon, .lemmy, .pinterest, .telegram, .twitch, .discord, .slack, .reddit, .tumblr,
     .dribbble, .mewe, .devto, .hashnode, .medium, .substack, .googleBusiness, .kick, .listmonk,
-    .wordpress, .nostr, .whop, .skool,
+    .wordpress, .nostr, .whop, .skool, .whatsapp,
   ]
 }
 

@@ -89,6 +89,9 @@ public final class FoPostClient: Sendable {
   /// Content, length, and media checks that create nothing.
   public var validate: ValidateResource { ValidateResource(transport: transport) }
 
+  /// WhatsApp Business: templates, flows, groups, blocking and commerce.
+  public var whatsapp: WhatsappResource { WhatsappResource(transport: transport) }
+
   // MARK: - Escape hatch
 
   /// Sends an authenticated request to an endpoint the SDK does not wrap yet
