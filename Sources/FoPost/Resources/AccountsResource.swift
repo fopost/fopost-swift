@@ -154,4 +154,184 @@ public struct AccountsResource: Resource {
     try await httpPatch(
       "/accounts/\(escapePath(id))/slack/identity", body: body, as: SlackIdentity.self)
   }
+
+  // MARK: - Discord (bot connections)
+
+  /// Text channels the bot can post to in the connected server. A 409
+  /// `webhook_connection` means the account posts through a webhook; upgrade it
+  /// to the bot first. The same applies to every other Discord call here.
+  public func discordChannels(_ id: String) async throws -> [DiscordChannel] {
+    try await httpGet(discordPath(id, "/channels"), as: [DiscordChannel].self)
+  }
+
+  /// Moves the account to another channel in the same server.
+  public func switchDiscordChannel(_ id: String, channelID: String) async throws -> DiscordChannel {
+    try await httpPatch(
+      discordPath(id, "/channels/current"),
+      body: SwitchDiscordChannelRequest(channelID: channelID), as: DiscordChannel.self)
+  }
+
+  /// The nickname and avatar the bot wears in the server.
+  public func discordIdentity(_ id: String) async throws -> DiscordIdentity {
+    try await httpGet(discordPath(id, "/identity"), as: DiscordIdentity.self)
+  }
+
+  /// Sets the nickname and avatar the bot wears in the server.
+  public func updateDiscordIdentity(_ id: String, _ body: UpdateDiscordIdentityRequest)
+    async throws -> DiscordIdentity
+  {
+    try await httpPatch(discordPath(id, "/identity"), body: body, as: DiscordIdentity.self)
+  }
+
+  /// Pinned messages in the account's channel.
+  public func discordPins(_ id: String) async throws -> [DiscordMessage] {
+    try await httpGet(discordPath(id, "/messages/pinned"), as: [DiscordMessage].self)
+  }
+
+  /// Removes a message from the account's channel.
+  @discardableResult
+  public func deleteDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpDelete(
+      discordPath(id, "/messages/\(escapePath(messageID))"), as: DiscordAck.self)
+  }
+
+  /// Pins a message in the account's channel.
+  @discardableResult
+  public func pinDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/pin"), as: DiscordAck.self)
+  }
+
+  /// Unpins a message in the account's channel.
+  @discardableResult
+  public func unpinDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpDelete(
+      discordPath(id, "/messages/\(escapePath(messageID))/pin"), as: DiscordAck.self)
+  }
+
+  /// Publishes an announcement-channel message to every server following it.
+  public func crosspostDiscordMessage(_ id: String, messageID: String) async throws
+    -> DiscordMessageRef
+  {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/crosspost"), as: DiscordMessageRef.self)
+  }
+
+  /// Starts a thread on a message.
+  public func createDiscordThread(
+    _ id: String, messageID: String, _ body: DiscordThreadRequest
+  ) async throws -> DiscordThread {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/thread"), body: body,
+      as: DiscordThread.self)
+  }
+
+  /// Sends one message to a member of the server.
+  public func sendDiscordDirectMessage(_ id: String, memberID: String, content: String)
+    async throws -> DiscordMessageRef
+  {
+    try await httpPost(
+      discordPath(id, "/dm"),
+      body: DiscordDirectMessageRequest(memberID: memberID, content: content),
+      as: DiscordMessageRef.self)
+  }
+
+  /// The server's scheduled events.
+  public func discordEvents(_ id: String) async throws -> [DiscordScheduledEvent] {
+    try await httpGet(discordPath(id, "/events"), as: [DiscordScheduledEvent].self)
+  }
+
+  /// One scheduled event.
+  public func discordEvent(_ id: String, eventID: String) async throws -> DiscordScheduledEvent {
+    try await httpGet(
+      discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordScheduledEvent.self)
+  }
+
+  /// Adds an event to the server's calendar.
+  public func createDiscordEvent(_ id: String, _ body: DiscordEventRequest) async throws
+    -> DiscordScheduledEvent
+  {
+    try await httpPost(discordPath(id, "/events"), body: body, as: DiscordScheduledEvent.self)
+  }
+
+  /// Changes a scheduled event; a `nil` field is left as it is.
+  public func updateDiscordEvent(_ id: String, eventID: String, _ body: DiscordEventRequest)
+    async throws -> DiscordScheduledEvent
+  {
+    try await httpPatch(
+      discordPath(id, "/events/\(escapePath(eventID))"), body: body,
+      as: DiscordScheduledEvent.self)
+  }
+
+  /// Removes a scheduled event.
+  @discardableResult
+  public func deleteDiscordEvent(_ id: String, eventID: String) async throws -> DiscordAck {
+    try await httpDelete(discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordAck.self)
+  }
+
+  /// The server's roster, or the members whose name starts with `query`.
+  public func discordMembers(_ id: String, query: String? = nil, limit: Int? = nil) async throws
+    -> [DiscordMember]
+  {
+    var search = Query()
+    search.add("q", query)
+    search.add("limit", limit)
+    return try await httpGet(discordPath(id, "/members"), query: search, as: [DiscordMember].self)
+  }
+
+  /// One member of the server.
+  public func discordMember(_ id: String, memberID: String) async throws -> DiscordMember {
+    try await httpGet(
+      discordPath(id, "/members/\(escapePath(memberID))"), as: DiscordMember.self)
+  }
+
+  /// The server's roles, highest first.
+  public func discordRoles(_ id: String) async throws -> [DiscordRole] {
+    try await httpGet(discordPath(id, "/roles"), as: [DiscordRole].self)
+  }
+
+  /// Adds a role to the server.
+  public func createDiscordRole(_ id: String, _ body: DiscordRoleRequest) async throws
+    -> DiscordRole
+  {
+    try await httpPost(discordPath(id, "/roles"), body: body, as: DiscordRole.self)
+  }
+
+  /// Changes a role on the server; a `nil` field is left as it is.
+  public func updateDiscordRole(_ id: String, roleID: String, _ body: DiscordRoleRequest)
+    async throws -> DiscordRole
+  {
+    try await httpPatch(
+      discordPath(id, "/roles/\(escapePath(roleID))"), body: body, as: DiscordRole.self)
+  }
+
+  /// Removes a role from the server.
+  @discardableResult
+  public func deleteDiscordRole(_ id: String, roleID: String) async throws -> DiscordAck {
+    try await httpDelete(discordPath(id, "/roles/\(escapePath(roleID))"), as: DiscordAck.self)
+  }
+
+  /// Gives a member a role.
+  @discardableResult
+  public func addDiscordMemberRole(_ id: String, roleID: String, memberID: String) async throws
+    -> DiscordAck
+  {
+    try await httpPut(memberRolePath(id, roleID, memberID), as: DiscordAck.self)
+  }
+
+  /// Takes a role from a member.
+  @discardableResult
+  public func removeDiscordMemberRole(_ id: String, roleID: String, memberID: String) async throws
+    -> DiscordAck
+  {
+    try await httpDelete(memberRolePath(id, roleID, memberID), as: DiscordAck.self)
+  }
+
+  private func discordPath(_ id: String, _ suffix: String) -> String {
+    "/accounts/\(escapePath(id))/discord\(suffix)"
+  }
+
+  private func memberRolePath(_ id: String, _ roleID: String, _ memberID: String) -> String {
+    discordPath(id, "/roles/\(escapePath(roleID))/members/\(escapePath(memberID))")
+  }
 }

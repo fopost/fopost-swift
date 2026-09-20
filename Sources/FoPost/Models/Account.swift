@@ -367,3 +367,265 @@ public struct UpdateSlackIdentityRequest: Encodable, Sendable {
     if let iconEmoji { try container.encode(iconEmoji, forKey: .iconEmoji) }
   }
 }
+
+// MARK: - Discord (bot connections)
+//
+// A Discord account connected with a webhook has no bot to act as: every call
+// below answers `409 webhook_connection` for one.
+
+/// A Discord text channel the bot can post to.
+public struct DiscordChannel: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// Discord's channel type: 0 text, 5 announcement, 15 forum.
+  public let type: Int?
+  public let parentID: String?
+  public let nsfw: Bool?
+  /// The channel this account posts to.
+  public let isCurrent: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name, type, nsfw
+    case parentID = "parent_id"
+    case isCurrent = "is_current"
+  }
+}
+
+/// The nickname and avatar the bot wears in the server.
+public struct DiscordIdentity: Codable, Sendable, Hashable {
+  /// Nil wears the application's own name.
+  public let username: String?
+  public let avatarURL: String?
+
+  enum CodingKeys: String, CodingKey {
+    case username
+    case avatarURL = "avatar_url"
+  }
+}
+
+/// The body of ``AccountsResource/updateDiscordIdentity(_:_:)``. A field left
+/// `nil` is omitted and keeps its value; `.some(nil)` sends `null` and clears it.
+public struct UpdateDiscordIdentityRequest: Encodable, Sendable {
+  /// 1-32 characters.
+  public var username: String??
+  /// An http(s) image URL.
+  public var avatarURL: String??
+
+  public init(username: String?? = nil, avatarURL: String?? = nil) {
+    self.username = username
+    self.avatarURL = avatarURL
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case username
+    case avatarURL = "avatar_url"
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    if let username { try container.encode(username, forKey: .username) }
+    if let avatarURL { try container.encode(avatarURL, forKey: .avatarURL) }
+  }
+}
+
+/// A message in the connected channel.
+public struct DiscordMessage: Codable, Sendable, Hashable {
+  public let id: String
+  public let channelID: String?
+  public let content: String?
+  public let authorID: String?
+  public let authorName: String?
+  public let pinned: Bool?
+  public let createdAt: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id, content, pinned
+    case channelID = "channel_id"
+    case authorID = "author_id"
+    case authorName = "author_name"
+    case createdAt = "created_at"
+  }
+}
+
+/// A message the bot put somewhere.
+public struct DiscordMessageRef: Codable, Sendable, Hashable {
+  public let id: String
+  public let channelID: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case channelID = "channel_id"
+  }
+}
+
+/// A thread started on a message.
+public struct DiscordThread: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let parentID: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name
+    case parentID = "parent_id"
+  }
+}
+
+/// An event on the server's calendar. `channelID` names a voice or stage
+/// channel; otherwise `location` says where it happens.
+public struct DiscordScheduledEvent: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let description: String?
+  public let channelID: String?
+  public let location: String?
+  public let startTime: String?
+  public let endTime: String?
+  /// `scheduled`, `active`, `completed` or `canceled`.
+  public let status: String?
+  public let userCount: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case id, name, description, location, status
+    case channelID = "channel_id"
+    case startTime = "start_time"
+    case endTime = "end_time"
+    case userCount = "user_count"
+  }
+}
+
+/// The body of the scheduled-event create and update calls. Give `channelID`,
+/// or `location` with an `endTime`. On an update, a `nil` field is left alone.
+public struct DiscordEventRequest: Encodable, Sendable {
+  public var name: String?
+  public var description: String?
+  /// RFC 3339.
+  public var startTime: String?
+  /// RFC 3339; required for an event at a location.
+  public var endTime: String?
+  public var channelID: String?
+  public var location: String?
+  /// Only meaningful on an update.
+  public var status: String?
+
+  public init(
+    name: String? = nil, description: String? = nil, startTime: String? = nil,
+    endTime: String? = nil, channelID: String? = nil, location: String? = nil,
+    status: String? = nil
+  ) {
+    self.name = name
+    self.description = description
+    self.startTime = startTime
+    self.endTime = endTime
+    self.channelID = channelID
+    self.location = location
+    self.status = status
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case name, description, location, status
+    case startTime = "start_time"
+    case endTime = "end_time"
+    case channelID = "channel_id"
+  }
+}
+
+/// A person in the connected server.
+public struct DiscordMember: Codable, Sendable, Hashable {
+  /// Discord user id; pass it as the member id for a DM or a role.
+  public let id: String
+  public let username: String?
+  public let displayName: String?
+  /// Nickname in this server.
+  public let nick: String?
+  public let avatar: String?
+  public let isBot: Bool?
+  public let roles: [String]?
+  public let joinedAt: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id, username, nick, avatar, roles
+    case displayName = "display_name"
+    case isBot = "is_bot"
+    case joinedAt = "joined_at"
+  }
+}
+
+/// A role in the connected server.
+public struct DiscordRole: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// An RGB integer; 0 is the default colour.
+  public let color: Int?
+  public let hoist: Bool?
+  public let mentionable: Bool?
+  /// A managed role belongs to an integration and cannot be edited.
+  public let managed: Bool?
+  public let position: Int?
+  /// Discord's permission bitfield as a decimal string.
+  public let permissions: String?
+}
+
+/// The body of the role create and update calls.
+public struct DiscordRoleRequest: Encodable, Sendable {
+  public var name: String?
+  /// An RGB integer, e.g. 5793266.
+  public var color: Int?
+  /// Show members with this role separately in the member list.
+  public var hoist: Bool?
+  public var mentionable: Bool?
+  /// Discord's permission bitfield as a decimal string.
+  public var permissions: String?
+
+  public init(
+    name: String? = nil, color: Int? = nil, hoist: Bool? = nil, mentionable: Bool? = nil,
+    permissions: String? = nil
+  ) {
+    self.name = name
+    self.color = color
+    self.hoist = hoist
+    self.mentionable = mentionable
+    self.permissions = permissions
+  }
+}
+
+/// The body of the thread call.
+public struct DiscordThreadRequest: Encodable, Sendable {
+  public var name: String
+  /// Minutes of inactivity before it archives: 60, 1440, 4320 or 10080.
+  public var autoArchiveDuration: Int?
+
+  public init(name: String, autoArchiveDuration: Int? = nil) {
+    self.name = name
+    self.autoArchiveDuration = autoArchiveDuration
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case name
+    case autoArchiveDuration = "auto_archive_duration"
+  }
+}
+
+/// What a Discord delete, pin or role assignment answers.
+public struct DiscordAck: Codable, Sendable, Hashable {
+  public let deleted: Bool?
+  public let pinned: Bool?
+  public let assigned: Bool?
+}
+
+struct SwitchDiscordChannelRequest: Encodable, Sendable {
+  let channelID: String
+
+  enum CodingKeys: String, CodingKey {
+    case channelID = "channel_id"
+  }
+}
+
+struct DiscordDirectMessageRequest: Encodable, Sendable {
+  let memberID: String
+  let content: String
+
+  enum CodingKeys: String, CodingKey {
+    case memberID = "member_id"
+    case content
+  }
+}
