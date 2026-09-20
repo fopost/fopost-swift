@@ -177,7 +177,7 @@ final class AccountsTests: XCTestCase {
     StubURLProtocol.script([
       .json(
         "{\"data\":[{\"id\":\"c2\",\"name\":\"launches\",\"type\":0,"
-          + "\"parent_id\":null,\"nsfw\":false,\"is_current\":true}]}"),
+          + "\"parent_id\":null,\"nsfw\":false,\"can_post\":true,\"is_current\":true}]}"),
       .json("{\"data\":{\"id\":\"c2\",\"name\":\"launches\",\"is_current\":true}}"),
     ])
     let client = try makeStubClient()
