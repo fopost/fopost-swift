@@ -137,6 +137,7 @@ let post = try await client.posts.create(
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
+| `client.activity` | What happened in a workspace, and the security audit log |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
@@ -149,7 +150,17 @@ for try await post in client.posts.all(PostListParams(status: .published)) {
 ```
 
 Inbox lists return an `InboxPage<T>` instead, whose `meta` is `page`, `perPage`,
-and `total`.
+and `total`. `client.activity.list(_:)` returns an `ActivityPage` whose `meta`
+is a single `nextCursor`; `kind: .security` is the audit log, whose rows are
+append-only and never expire.
+
+```swift
+let page = try await client.activity.list(
+    ActivityListParams(workspaceID: workspaceID, kind: .security))
+for event in page.data {
+    print("\(event.actor.name ?? "System"): \(event.summary)")
+}
+```
 
 ## Broadcasts and sequences
 
