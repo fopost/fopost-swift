@@ -131,6 +131,7 @@ let post = try await client.posts.create(
 | `client.automations` | Automations, runs, stats, manual triggers |
 | `client.media` | The media library, uploads, and direct (presigned) uploads |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
+| `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 
@@ -149,7 +150,7 @@ and `total`.
 
 ## Inbox and ads
 
-Every inbox call needs an API key with the `inbox` scope, every ads call the
+Every inbox and contacts call needs an API key with the `inbox` scope — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
 `setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
@@ -172,6 +173,49 @@ let ad = try await client.ads.boost(
         budget: AdBudget(minor: 2000, type: .daily),
         targeting: AdTargeting(countries: ["US", "CA"], ageMin: 21, ageMax: 45)))
 _ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
+```
+
+## Contacts
+
+The people behind the inbox: one person however many handles they write from. An inbound item files its author, a reply files whoever you answered, and both fold into whatever is already on file.
+
+```swift
+let page = try await client.contacts.list(workspaceID: workspaceID, search: "ada")
+for contact in page.data {
+  print("\(contact.displayName ?? "") — \(contact.channels.count) handles")
+}
+
+// Folds into whoever already holds the first channel, so this cannot duplicate someone.
+let contact = try await client.contacts.create(
+  CreateContactRequest(
+    workspaceID: workspaceID,
+    channels: [ContactChannel(platform: "x", handle: "ada_writes")],
+    displayName: "Ada Okafor",
+    fields: ["plan_tier": "Pro"]))
+
+// A field set to nil is cleared; everything left out is untouched.
+_ = try await client.contacts.update(contact.id, UpdateContactRequest(fields: ["region": nil]))
+try await client.contacts.delete(contact.id)   // the messages stay in the inbox
+
+// The threads this person appears in, newest first.
+for thread in try await client.contacts.conversations(contact.id) {
+  print("\(thread.platform) \(thread.messages) messages")
+}
+
+// platform and handle are required columns; any other column is a custom field key.
+let result = try await client.contacts.importCSV(
+  workspaceID: workspaceID, csv: "platform,handle\nx,ada_writes")
+print("\(result.created) created, \(result.merged) merged")
+
+// The columns your workspace keeps.
+let field = try await client.contacts.createField(
+  CreateContactFieldRequest(
+    workspaceID: workspaceID, key: "plan_tier", name: "Plan Tier", type: .select,
+    options: ["Free", "Pro"]))
+try await client.contacts.deleteField(field.id)   // removes every answer to it
+
+// Volume and median reply time per thread. Needs the `analytics` scope.
+let report = try await client.contacts.conversationAnalytics(days: 30, sort: "slowest")
 ```
 
 ## Validation
