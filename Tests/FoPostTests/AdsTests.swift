@@ -99,8 +99,8 @@ final class AdsTests: XCTestCase {
     StubURLProtocol.script([.json(#"{"data":{"url":"https://example.invalid/login"}}"#)])
     let client = try makeStubClient()
 
-    let authorization = try await client.ads.authorizeMeta(
-      ConnectMetaAdsRequest(workspaceId: "ws_1", method: .business))
+    let authorization = try await client.ads.authorize(
+      ConnectAdsRequest(workspaceId: "ws_1", method: .business))
 
     XCTAssertEqual(authorization.url, "https://example.invalid/login")
     let request = try XCTUnwrap(StubURLProtocol.requests.first)
@@ -108,6 +108,18 @@ final class AdsTests: XCTestCase {
     let body = try request.bodyJSON()
     XCTAssertEqual(body["workspaceId"] as? String, "ws_1")
     XCTAssertEqual(body["method"] as? String, "business")
+    // The provider names the path and is not sent in the body.
+    XCTAssertNil(body["provider"])
+  }
+
+  func testAuthorizeNamesItsAdNetwork() async throws {
+    let client = try makeStubClient()
+
+    _ = try await client.ads.authorize(
+      ConnectAdsRequest(workspaceId: "ws_1", provider: "pinterest"))
+
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/ads/connections/pinterest/authorize")
   }
 
   func testAudiencesTargetingAndLeadsBuildTheirQueries() async throws {

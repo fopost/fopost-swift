@@ -84,7 +84,7 @@ public final class FoPostClient: Sendable {
   public var media: MediaResource { MediaResource(transport: transport) }
   /// Comments, mentions, and direct messages on connected accounts.
   public var inbox: InboxResource { InboxResource(transport: transport) }
-  /// Boosts, ads, audiences, and lead forms on a Meta Ads connection.
+  /// Boosts, ads, audiences, and lead forms on an ad connection.
   public var ads: AdsResource { AdsResource(transport: transport) }
   /// Content, length, and media checks that create nothing.
   public var validate: ValidateResource { ValidateResource(transport: transport) }

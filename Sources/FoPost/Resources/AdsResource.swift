@@ -1,7 +1,7 @@
 import Foundation
 
 /// Boosts, ads, the campaign tree, creatives, audiences, insights, and lead
-/// forms on a Meta Ads connection. Every call needs the `ads` scope; the ones
+/// forms on an ad connection. Every call needs the `ads` scope; the ones
 /// that spend money (``boost(_:)``, ``create(_:)``,
 /// ``setStatus(_:workspaceID:status:)``, ``delete(_:workspaceID:)``,
 /// ``bulkSetStatus(_:)``, and every create, update, delete, and duplicate on
@@ -29,7 +29,7 @@ public struct AdsResource: Resource {
       "/ads/boostable", query: workspaceQuery(workspaceID), as: [BoostablePost].self)
   }
 
-  /// The Meta Ads connections in reach.
+  /// The ad connections in reach.
   public func connections(workspaceID: String? = nil) async throws -> [AdConnection] {
     try await httpGet(
       "/ads/connections", query: workspaceQuery(workspaceID), as: [AdConnection].self)
@@ -40,11 +40,20 @@ public struct AdsResource: Resource {
     try await httpGet("/ads/sources", query: workspaceQuery(workspaceID), as: [AdSource].self)
   }
 
-  /// Starts a Meta Ads connection. The caller finishes the login at the
-  /// returned URL in their own browser.
-  public func authorizeMeta(_ body: ConnectMetaAdsRequest) async throws -> MetaAdsAuthorization {
-    try await httpPost(
-      "/ads/connections/meta/authorize", body: body, as: MetaAdsAuthorization.self)
+  /// Starts an ad connection on the network `body.provider` names. The caller
+  /// finishes the login at the returned URL in their own browser. A network
+  /// that is not available on the deployment answers 503.
+  public func authorize(_ body: ConnectAdsRequest) async throws -> MetaAdsAuthorization {
+    let provider = body.provider.isEmpty ? "meta" : body.provider
+    return try await httpPost(
+      "/ads/connections/\(escapePath(provider))/authorize", body: body,
+      as: MetaAdsAuthorization.self)
+  }
+
+  /// Starts a Meta Ads connection.
+  @available(*, deprecated, renamed: "authorize(_:)")
+  public func authorizeMeta(_ body: ConnectAdsRequest) async throws -> MetaAdsAuthorization {
+    try await authorize(body)
   }
 
   /// Removes a connection and every ad record created through it.

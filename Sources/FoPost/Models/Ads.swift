@@ -268,7 +268,7 @@ public struct BoostablePost: Codable, Sendable, Hashable {
   public let deliveries: [Delivery]?
 }
 
-/// A Meta Ads login that reaches ad accounts and Pages.
+/// An ad-network login that reaches ad accounts.
 public struct AdConnection: Codable, Sendable, Hashable {
   public let id: String
   /// `meta`.
@@ -402,24 +402,47 @@ public struct CreatedLeadForm: Codable, Sendable, Hashable {
 }
 
 /// The body of ``AdsResource/authorizeMeta(_:)``.
-public struct ConnectMetaAdsRequest: Codable, Sendable {
+public struct ConnectAdsRequest: Codable, Sendable {
   public var workspaceId: String
+  /// The ad network to connect. It names the path, so it is not encoded.
+  public var provider: String
+  /// The network's own login method; `business` or `user` on Meta.
   public var method: MetaAdsAuthMethod?
   /// Dashboard path to land on after the platform redirects back.
   public var returnTo: String?
 
-  public init(workspaceId: String, method: MetaAdsAuthMethod? = nil, returnTo: String? = nil) {
+  public init(
+    workspaceId: String, provider: String = "meta", method: MetaAdsAuthMethod? = nil,
+    returnTo: String? = nil
+  ) {
     self.workspaceId = workspaceId
+    self.provider = provider
     self.method = method
     self.returnTo = returnTo
   }
+
+  private enum CodingKeys: String, CodingKey {
+    case workspaceId, method, returnTo
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    workspaceId = try container.decode(String.self, forKey: .workspaceId)
+    method = try container.decodeIfPresent(MetaAdsAuthMethod.self, forKey: .method)
+    returnTo = try container.decodeIfPresent(String.self, forKey: .returnTo)
+    provider = "meta"
+  }
 }
+
+/// The body of the deprecated ``AdsResource/authorizeMeta(_:)``.
+@available(*, deprecated, renamed: "ConnectAdsRequest")
+public typealias ConnectMetaAdsRequest = ConnectAdsRequest
 
 /// The body of ``AdsResource/boost(_:)``. The boost starts paused unless
 /// `paused` is `false`.
 public struct BoostPostRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   /// The ad account, `act_…`.
   public var adAccountId: String
@@ -456,7 +479,7 @@ public struct BoostPostRequest: Codable, Sendable {
 /// `paused` is `false`.
 public struct CreateAdRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   /// The ad account, `act_…`.
   public var adAccountId: String
@@ -940,7 +963,7 @@ public struct SubscribedLeadPage: Codable, Sendable, Hashable {
 /// unless `paused` is `false`.
 public struct CreateAdCampaignRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   /// The ad account, `act_…`.
   public var adAccountId: String
@@ -976,7 +999,7 @@ public struct UpdateAdCampaignRequest: Codable, Sendable {
 /// unless `paused` is `false`.
 public struct CreateAdSetRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   public var campaignId: String
   /// The Page the ads in this set run as.
@@ -1028,7 +1051,7 @@ public struct UpdateAdSetRequest: Codable, Sendable {
 /// unless `paused` is `false`.
 public struct CreateNetworkAdRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   public var adSetId: String
   /// From ``AdsResource/createCreative(_:)`` or the creative library.
@@ -1077,7 +1100,7 @@ public struct AdObjectRef: Codable, Sendable, Hashable {
 /// The body of ``AdsResource/bulkSetStatus(_:)``.
 public struct BulkAdStatusRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   public var status: AdStatus
   /// One to 50 objects.
@@ -1116,7 +1139,7 @@ public struct AdCreativeCard: Codable, Sendable, Hashable {
 /// `mediaUrl`), or a carousel (needs `cards`).
 public struct CreateAdCreativeRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   /// The ad account, `act_…`.
   public var adAccountId: String
@@ -1174,7 +1197,7 @@ public struct UpdateAudienceRequest: Codable, Sendable {
 /// The body of ``AdsResource/estimateReach(_:)``.
 public struct ReachEstimateRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   /// The ad account, `act_…`.
   public var adAccountId: String
@@ -1196,7 +1219,7 @@ public struct ReachEstimateRequest: Codable, Sendable {
 /// The body of ``AdsResource/subscribeLeadPage(_:)``.
 public struct SubscribeLeadPageRequest: Codable, Sendable {
   public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
+  /// An ad connection in the workspace.
   public var connectionId: String
   public var pageId: String
 
