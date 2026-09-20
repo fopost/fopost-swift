@@ -8,9 +8,11 @@ public struct InboxItemType: FoPostStringEnum {
   public static let comment: Self = "comment"
   public static let mention: Self = "mention"
   public static let dm: Self = "dm"
+  /// A rating left on the business: a Google Business review or a Facebook Page recommendation.
+  public static let review: Self = "review"
 
   /// Every value the SDK knows about at this version.
-  public static let known: [Self] = [.comment, .mention, .dm]
+  public static let known: [Self] = [.comment, .mention, .dm, .review]
 }
 
 /// Where an inbox item sits in its workflow.
@@ -59,9 +61,10 @@ public struct InboxThreadKind: FoPostStringEnum {
 
   public static let comments: Self = "comments"
   public static let mentions: Self = "mentions"
+  public static let reviews: Self = "reviews"
 
   /// Every value the SDK knows about at this version.
-  public static let known: [Self] = [.comments, .mentions]
+  public static let known: [Self] = [.comments, .mentions, .reviews]
 }
 
 /// How far a platform's inbox support has come.
@@ -141,7 +144,7 @@ public struct InboxPostContext: Codable, Sendable, Hashable {
   public let published: [String: JSONValue]?
 }
 
-/// One comment, mention, or direct message.
+/// One comment, mention, review, or direct message.
 public struct InboxItem: Codable, Sendable, Hashable {
   public let id: String
   public let workspaceId: String?
@@ -154,6 +157,8 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let authorHandle: String?
   public let authorAvatarUrl: String?
   public let text: String?
+  /// Stars on a review, 1-5. Nil on every other type.
+  public let rating: Int?
   public let attachments: [InboxAttachment]?
   public let permalink: String?
   public let postExternalId: String?
@@ -189,7 +194,7 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let account: InboxAccountRef?
 }
 
-/// One platform post with comments, or one post we were mentioned in.
+/// One platform post with comments, one post we were mentioned in, or one review.
 public struct InboxThread: Codable, Sendable, Hashable {
   public let workspaceId: String?
   public let accountId: String?
@@ -199,6 +204,8 @@ public struct InboxThread: Codable, Sendable, Hashable {
   public let lastCommentAt: Date?
   public let lastCommentText: String?
   public let lastCommentAuthor: String?
+  /// Stars, on a review thread. Nil on comments and mentions.
+  public let rating: Int?
   public let post: InboxPostContext?
   public let account: InboxAccountRef?
 }
@@ -304,6 +311,19 @@ public struct InboxConversationStart: Codable, Sendable, Hashable {
 /// ``InboxResource/setTyping(conversationID:accountID:on:)``.
 public struct InboxTypingResult: Codable, Sendable, Hashable {
   public let typing: Bool?
+}
+
+/// The outcome of ``InboxResource/handover(conversationID:accountID:appID:metadata:)``.
+public struct InboxHandover: Codable, Sendable, Hashable {
+  /// The app control went to, or nil when it was taken back.
+  public let appID: String?
+  /// `passed` or `taken`.
+  public let control: String
+
+  enum CodingKeys: String, CodingKey {
+    case appID = "app_id"
+    case control
+  }
 }
 
 /// How many items ``InboxResource/markThreadRead(_:)`` settled.
@@ -576,6 +596,18 @@ struct InboxTypingRequest: Codable, Sendable {
   enum CodingKeys: String, CodingKey {
     case accountID = "account_id"
     case on
+  }
+}
+
+struct InboxHandoverRequest: Codable, Sendable {
+  var accountID: String
+  var appID: String?
+  var metadata: String?
+
+  enum CodingKeys: String, CodingKey {
+    case accountID = "account_id"
+    case appID = "app_id"
+    case metadata
   }
 }
 
