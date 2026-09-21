@@ -291,6 +291,7 @@ public struct Platform: FoPostStringEnum {
   public static let mastodon: Self = "mastodon"
   public static let lemmy: Self = "lemmy"
   public static let pinterest: Self = "pinterest"
+  public static let snapchat: Self = "snapchat"
   public static let telegram: Self = "telegram"
   public static let twitch: Self = "twitch"
   public static let discord: Self = "discord"
@@ -314,7 +315,7 @@ public struct Platform: FoPostStringEnum {
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .twitter, .instagram, .instagramBusiness, .facebook, .linkedin, .tiktok, .youtube, .bluesky,
-    .threads, .mastodon, .lemmy, .pinterest, .telegram, .twitch, .discord, .slack, .reddit, .tumblr,
+    .threads, .mastodon, .lemmy, .pinterest, .snapchat, .telegram, .twitch, .discord, .slack, .reddit, .tumblr,
     .dribbble, .mewe, .devto, .hashnode, .medium, .substack, .googleBusiness, .kick, .listmonk,
     .wordpress, .nostr, .whop, .skool,
   ]
