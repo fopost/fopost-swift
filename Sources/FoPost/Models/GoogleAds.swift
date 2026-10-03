@@ -663,3 +663,70 @@ public struct GoogleAdsScopeRequest: Codable, Sendable {
     self.customerId = scope.customerId
   }
 }
+
+/// What Google projects applying a recommendation would change. A `nil` field
+/// is one Google does not estimate for that recommendation.
+public struct GoogleRecommendationImpact: Codable, Sendable, Hashable {
+  public let baseClicks: Double?
+  public let potentialClicks: Double?
+  /// The account's currency, in minor units.
+  public let baseCostMinor: Int?
+  public let potentialCostMinor: Int?
+  public let baseConversions: Double?
+  public let potentialConversions: Double?
+}
+
+/// One of Google's own recommendations for the account.
+///
+/// ``id`` is the Google resource name rather than the `~` form other objects
+/// use, because a recommendation is not an object you address again: it is what
+/// apply and dismiss take.
+public struct GoogleRecommendation: Codable, Sendable, Hashable {
+  public let id: String
+  public let type: String?
+  public let campaignId: String?
+  public let adGroupId: String?
+  public let dismissed: Bool?
+  public let impact: GoogleRecommendationImpact?
+}
+
+/// One campaign's optimization score.
+public struct GoogleOptimizationScoreCampaign: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let score: Double?
+}
+
+/// Google's estimate of how well the account is set up, from 0 to 1.
+public struct GoogleOptimizationScore: Codable, Sendable, Hashable {
+  public let score: Double?
+  /// How much this account's score counts against others under the same manager.
+  public let weight: Double?
+  public let campaigns: [GoogleOptimizationScoreCampaign]?
+}
+
+/// How many recommendations an apply accepted.
+public struct GoogleApplied: Codable, Sendable, Hashable {
+  public let applied: Int?
+}
+
+/// How many recommendations a dismiss hid.
+public struct GoogleDismissed: Codable, Sendable, Hashable {
+  public let dismissed: Int?
+}
+
+/// Apply or dismiss recommendations on one account.
+public struct GoogleRecommendationsRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var customerId: String
+  /// Google resource names, each on `customerId`.
+  public var ids: [String]
+
+  public init(scope: GoogleAdsScope, ids: [String]) {
+    self.workspaceId = scope.workspaceId ?? ""
+    self.connectionId = scope.connectionId
+    self.customerId = scope.customerId
+    self.ids = ids
+  }
+}

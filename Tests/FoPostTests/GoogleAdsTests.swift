@@ -88,6 +88,46 @@ final class GoogleAdsTests: XCTestCase {
     XCTAssertEqual(request.path, "/v1/ads/insights/query")
   }
 
+  func testRecommendationsJoinTheTypesFilter() async throws {
+    StubURLProtocol.script([
+      .json(
+        #"{"data":[{"id":"customers/1234567890/recommendations/ABC~1","type":"KEYWORD","campaignId":"1234567890~campaign~55","dismissed":false,"impact":{"baseClicks":10,"potentialClicks":25}}]}"#
+      )
+    ])
+    let client = try makeStubClient()
+
+    let rows = try await client.googleAds.recommendations(
+      scope, types: ["KEYWORD", "TARGET_CPA_OPT_IN"])
+
+    XCTAssertEqual(rows.first?.type, "KEYWORD")
+    XCTAssertEqual(rows.first?.impact?.potentialClicks, 25)
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.query["types"], "KEYWORD,TARGET_CPA_OPT_IN")
+  }
+
+  func testRecommendationsOmitTypesWhenNoneGiven() async throws {
+    StubURLProtocol.script([.json(#"{"data":[]}"#)])
+    let client = try makeStubClient()
+
+    _ = try await client.googleAds.recommendations(scope)
+
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertNil(request.query["types"])
+  }
+
+  func testApplyRecommendationsSendsTheIds() async throws {
+    StubURLProtocol.script([.json(#"{"data":{"applied":1}}"#)])
+    let client = try makeStubClient()
+
+    let result = try await client.googleAds.applyRecommendations(
+      GoogleRecommendationsRequest(
+        scope: scope, ids: ["customers/1234567890/recommendations/ABC~1"]))
+
+    XCTAssertEqual(result.applied, 1)
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/ads/google/recommendations/apply")
+  }
+
   func testAuthorizeGoogleHasItsOwnRoute() async throws {
     StubURLProtocol.script([.json(#"{"data":{"url":"https://accounts.google.com/o/x"}}"#)])
     let client = try makeStubClient()
