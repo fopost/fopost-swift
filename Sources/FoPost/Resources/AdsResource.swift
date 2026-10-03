@@ -535,24 +535,13 @@ public struct AdsResource: Resource {
   /// click id; the address is hashed inside the API and nothing is stored.
   @discardableResult
   public func sendConversionEvents(
-    _ id: String, events: [ConversionEvent], workspaceID: String, connectionID: String
+    _ id: String, events: [ConversionApiEvent], workspaceID: String, connectionID: String
   ) async throws -> AcceptedConversionEvents {
     try await httpPost(
       conversionRulePath(id, "/events"), body: ConversionEventsRequest(events: events),
       query: metaQuery(workspaceID, connectionID), as: AcceptedConversionEvents.self)
   }
 
-  /// The network's own public ad library, not the connection's ads.
-  public func adLibrary(_ params: AdLibraryParams) async throws -> AdLibraryPage {
-    var query = metaQuery(params.workspaceID, params.connectionID)
-    query.add("keyword", params.keyword)
-    query.add("advertiser", params.advertiser)
-    query.add("countries", params.countries?.joined(separator: ","))
-    query.add("since", params.since)
-    query.add("until", params.until)
-    query.add("cursor", params.cursor)
-    return try await httpGet("/ads/ad-library", query: query, as: AdLibraryPage.self)
-  }
 
   private func conversionRulePath(_ id: String, _ suffix: String = "") -> String {
     "/ads/linkedin/conversion-rules/\(escapePath(id))\(suffix)"

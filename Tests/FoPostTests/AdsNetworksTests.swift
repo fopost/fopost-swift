@@ -66,7 +66,7 @@ final class AdsNetworksTests: XCTestCase {
 
     let accepted = try await client.ads.sendConversionEvents(
       "urn:li:conversion:9",
-      events: [ConversionEvent(happenedAt: 1_758_326_400_000, email: "buyer@example.test")],
+      events: [ConversionApiEvent(happenedAt: 1_758_326_400_000, email: "buyer@example.test")],
       workspaceID: "ws_1", connectionID: "conn_1")
 
     XCTAssertEqual(accepted.accepted, 1)

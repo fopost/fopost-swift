@@ -594,7 +594,7 @@ public struct ConversionMetrics: Codable, Sendable, Hashable {
 
 /// One conversion sent back to the network. It needs an `email` or a
 /// `clickId`; the address is hashed inside the API and nothing is stored.
-public struct ConversionEvent: Codable, Sendable, Hashable {
+public struct ConversionApiEvent: Codable, Sendable, Hashable {
   /// Epoch milliseconds.
   public var happenedAt: Int
   public var valueMinor: Int?
@@ -623,57 +623,6 @@ public struct AcceptedConversionEvents: Codable, Sendable, Hashable {
   public let accepted: Int?
 }
 
-/// A public ad from the network's own library, never a connection's own data.
-public struct AdLibraryAd: Codable, Sendable, Hashable {
-  public let id: String
-  public let advertiserName: String?
-  public let advertiserUrl: String?
-  public let headline: String?
-  public let body: String?
-  public let type: String?
-  public let thumbnailUrl: String?
-  public let firstImpressionAt: String?
-  public let lastImpressionAt: String?
-  public let countries: [String]?
-  public let detailsUrl: String?
-  /// The paying entity, where the network discloses one.
-  public let payer: String?
-  public let impressionsRange: String?
-}
-
-/// One page of ad-library results. Pass `nextCursor` back as the cursor.
-public struct AdLibraryPage: Codable, Sendable, Hashable {
-  public let ads: [AdLibraryAd]?
-  public let nextCursor: String?
-}
-
-/// What an ad-library search narrows on. Dates are `YYYY-MM-DD`.
-public struct AdLibraryParams: Sendable {
-  public var workspaceID: String?
-  public var connectionID: String
-  public var keyword: String?
-  public var advertiser: String?
-  /// ISO 3166-1 alpha-2 codes.
-  public var countries: [String]?
-  public var since: String?
-  public var until: String?
-  public var cursor: String?
-
-  public init(
-    connectionID: String, workspaceID: String? = nil, keyword: String? = nil,
-    advertiser: String? = nil, countries: [String]? = nil, since: String? = nil,
-    until: String? = nil, cursor: String? = nil
-  ) {
-    self.connectionID = connectionID
-    self.workspaceID = workspaceID
-    self.keyword = keyword
-    self.advertiser = advertiser
-    self.countries = countries
-    self.since = since
-    self.until = until
-    self.cursor = cursor
-  }
-}
 
 /// The audience ``AdsResource/createAudience(_:)`` made.
 public struct CreatedAudience: Codable, Sendable, Hashable {
@@ -1519,7 +1468,7 @@ struct ConversionAssociationRequest: Codable, Sendable {
 }
 
 struct ConversionEventsRequest: Codable, Sendable {
-  var events: [ConversionEvent]
+  var events: [ConversionApiEvent]
 }
 
 struct ArchiveLeadFormRequest: Codable, Sendable {
