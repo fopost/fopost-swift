@@ -218,6 +218,40 @@ public struct GoogleAdsResource: Resource {
       "/ads/google/conversions/adjustments", body: body, as: GoogleUploaded.self)
   }
 
+  // ── Recommendations ──
+
+  /// Google's own read on what the account should change next; `types` narrows
+  /// to those recommendation types.
+  public func recommendations(_ scope: GoogleAdsScope, types: [String] = []) async throws
+    -> [GoogleRecommendation]
+  {
+    try await httpGet(
+      "/ads/google/recommendations",
+      query: query(scope, ["types": types.isEmpty ? nil : types.joined(separator: ",")]),
+      as: [GoogleRecommendation].self)
+  }
+
+  /// The account's score and weight, and the score of each live campaign.
+  public func optimizationScore(_ scope: GoogleAdsScope) async throws -> GoogleOptimizationScore {
+    try await httpGet(
+      "/ads/google/optimization-score", query: query(scope), as: GoogleOptimizationScore.self)
+  }
+
+  /// Applies each one, which changes what the live account serves or bids.
+  /// Needs `publish` as well as `ads`.
+  public func applyRecommendations(_ body: GoogleRecommendationsRequest) async throws
+    -> GoogleApplied
+  {
+    try await httpPost("/ads/google/recommendations/apply", body: body, as: GoogleApplied.self)
+  }
+
+  /// Hides each one so Google stops surfacing it. Needs `publish` as well as `ads`.
+  public func dismissRecommendations(_ body: GoogleRecommendationsRequest) async throws
+    -> GoogleDismissed
+  {
+    try await httpPost("/ads/google/recommendations/dismiss", body: body, as: GoogleDismissed.self)
+  }
+
   // ── GAQL ──
 
   /// Runs a read-only GAQL SELECT; rows come back as Google sends them.
