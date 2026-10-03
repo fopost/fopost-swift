@@ -64,6 +64,20 @@ public struct AccountsResource: Resource {
       "/accounts/\(escapePath(id))/health", query: query, as: AccountHealth.self)
   }
 
+  /// The numbers only this account's network reports, in its own vocabulary:
+  /// ad-break earnings, story taps, a retention curve, the search terms behind a
+  /// listing. Keyed by the platform's own metric names, read from the newest
+  /// collected snapshot rather than fetched live. Needs the `analytics` scope.
+  ///
+  /// A network whose metric access has not been granted yet answers `503`
+  /// (`platform_metrics_unavailable`) rather than an empty set.
+  public func platformMetrics(_ id: String) async throws -> AccountPlatformMetrics {
+    var query = Query()
+    query.add("raw", true)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/insights", query: query, as: AccountPlatformMetrics.self)
+  }
+
   /// The health of every account, optionally narrowed to one workspace.
   public func healthSummary(workspaceID: String? = nil) async throws -> HealthSummary {
     var query = Query()
@@ -153,5 +167,433 @@ public struct AccountsResource: Resource {
   {
     try await httpPatch(
       "/accounts/\(escapePath(id))/slack/identity", body: body, as: SlackIdentity.self)
+  }
+
+  // MARK: - Meta messaging settings (Facebook Pages, Instagram)
+
+  /// The prompts shown before the first message. A network without them answers `400`.
+  public func iceBreakers(_ id: String) async throws -> MetaIceBreakers {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
+  }
+
+  /// Replaces the ice breakers, up to four.
+  public func setIceBreakers(_ id: String, _ iceBreakers: [MetaIceBreaker]) async throws
+    -> MetaIceBreakers
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers",
+      body: MetaIceBreakers(iceBreakers: iceBreakers), as: MetaIceBreakers.self)
+  }
+
+  /// Clears the ice breakers.
+  @discardableResult
+  public func deleteIceBreakers(_ id: String) async throws -> MetaIceBreakers {
+    try await httpDelete(
+      "/accounts/\(escapePath(id))/messaging/ice-breakers", as: MetaIceBreakers.self)
+  }
+
+  /// The always-visible Messenger menu. Facebook Pages only.
+  public func persistentMenu(_ id: String) async throws -> MetaPersistentMenu {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu", as: MetaPersistentMenu.self)
+  }
+
+  /// Replaces the menu, one entry per locale, up to three items each.
+  public func setPersistentMenu(_ id: String, _ menu: [MetaPersistentMenuEntry]) async throws
+    -> MetaPersistentMenu
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu",
+      body: MetaPersistentMenu(persistentMenu: menu), as: MetaPersistentMenu.self)
+  }
+
+  /// Clears the menu.
+  @discardableResult
+  public func deletePersistentMenu(_ id: String) async throws -> MetaPersistentMenu {
+    try await httpDelete(
+      "/accounts/\(escapePath(id))/messaging/persistent-menu", as: MetaPersistentMenu.self)
+  }
+
+  /// The text shown before a Messenger conversation starts. Facebook Pages only.
+  public func greeting(_ id: String) async throws -> MetaGreeting {
+    try await httpGet("/accounts/\(escapePath(id))/messaging/greeting", as: MetaGreeting.self)
+  }
+
+  /// Replaces the greeting, one entry per locale, each up to 160 characters.
+  public func setGreeting(_ id: String, _ greeting: [MetaGreetingText]) async throws -> MetaGreeting
+  {
+    try await httpPut(
+      "/accounts/\(escapePath(id))/messaging/greeting",
+      body: MetaGreeting(greeting: greeting), as: MetaGreeting.self)
+  }
+
+  /// Clears the greeting.
+  @discardableResult
+  public func deleteGreeting(_ id: String) async throws -> MetaGreeting {
+    try await httpDelete("/accounts/\(escapePath(id))/messaging/greeting", as: MetaGreeting.self)
+  }
+
+  /// What the network is delivering to the FoPost webhook for this account.
+  public func webhookSubscription(_ id: String) async throws -> WebhookSubscription {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/webhook-subscription", as: WebhookSubscription.self)
+  }
+
+  /// Subscribes to every field this account needs, lapsed or not.
+  @discardableResult
+  public func resubscribeWebhook(_ id: String) async throws -> WebhookSubscription {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/webhook-subscription", as: WebhookSubscription.self)
+  }
+
+  // MARK: - Discord (bot connections)
+
+  /// Text channels the bot can post to in the connected server. A 409
+  /// `webhook_connection` means the account posts through a webhook; upgrade it
+  /// to the bot first. The same applies to every other Discord call here.
+  public func discordChannels(_ id: String) async throws -> [DiscordChannel] {
+    try await httpGet(discordPath(id, "/channels"), as: [DiscordChannel].self)
+  }
+
+  /// Moves the account to another channel in the same server.
+  public func switchDiscordChannel(_ id: String, channelID: String) async throws -> DiscordChannel {
+    try await httpPatch(
+      discordPath(id, "/channels/current"),
+      body: SwitchDiscordChannelRequest(channelID: channelID), as: DiscordChannel.self)
+  }
+
+  /// The nickname and avatar the bot wears in the server.
+  public func discordIdentity(_ id: String) async throws -> DiscordIdentity {
+    try await httpGet(discordPath(id, "/identity"), as: DiscordIdentity.self)
+  }
+
+  /// Sets the nickname and avatar the bot wears in the server.
+  public func updateDiscordIdentity(_ id: String, _ body: UpdateDiscordIdentityRequest)
+    async throws -> DiscordIdentity
+  {
+    try await httpPatch(discordPath(id, "/identity"), body: body, as: DiscordIdentity.self)
+  }
+
+  /// Pinned messages in the account's channel.
+  public func discordPins(_ id: String) async throws -> [DiscordMessage] {
+    try await httpGet(discordPath(id, "/messages/pinned"), as: [DiscordMessage].self)
+  }
+
+  /// Removes a message from the account's channel.
+  @discardableResult
+  public func deleteDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpDelete(
+      discordPath(id, "/messages/\(escapePath(messageID))"), as: DiscordAck.self)
+  }
+
+  /// Pins a message in the account's channel.
+  @discardableResult
+  public func pinDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/pin"), as: DiscordAck.self)
+  }
+
+  /// Unpins a message in the account's channel.
+  @discardableResult
+  public func unpinDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
+    try await httpDelete(
+      discordPath(id, "/messages/\(escapePath(messageID))/pin"), as: DiscordAck.self)
+  }
+
+  /// Publishes an announcement-channel message to every server following it.
+  public func crosspostDiscordMessage(_ id: String, messageID: String) async throws
+    -> DiscordMessageRef
+  {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/crosspost"), as: DiscordMessageRef.self)
+  }
+
+  /// Starts a thread on a message.
+  public func createDiscordThread(
+    _ id: String, messageID: String, _ body: DiscordThreadRequest
+  ) async throws -> DiscordThread {
+    try await httpPost(
+      discordPath(id, "/messages/\(escapePath(messageID))/thread"), body: body,
+      as: DiscordThread.self)
+  }
+
+  /// Sends one message to a member of the server.
+  public func sendDiscordDirectMessage(_ id: String, memberID: String, content: String)
+    async throws -> DiscordMessageRef
+  {
+    try await httpPost(
+      discordPath(id, "/dm"),
+      body: DiscordDirectMessageRequest(memberID: memberID, content: content),
+      as: DiscordMessageRef.self)
+  }
+
+  /// The server's scheduled events.
+  public func discordEvents(_ id: String) async throws -> [DiscordScheduledEvent] {
+    try await httpGet(discordPath(id, "/events"), as: [DiscordScheduledEvent].self)
+  }
+
+  /// One scheduled event.
+  public func discordEvent(_ id: String, eventID: String) async throws -> DiscordScheduledEvent {
+    try await httpGet(
+      discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordScheduledEvent.self)
+  }
+
+  /// Adds an event to the server's calendar.
+  public func createDiscordEvent(_ id: String, _ body: DiscordEventRequest) async throws
+    -> DiscordScheduledEvent
+  {
+    try await httpPost(discordPath(id, "/events"), body: body, as: DiscordScheduledEvent.self)
+  }
+
+  /// Changes a scheduled event; a `nil` field is left as it is.
+  public func updateDiscordEvent(_ id: String, eventID: String, _ body: DiscordEventRequest)
+    async throws -> DiscordScheduledEvent
+  {
+    try await httpPatch(
+      discordPath(id, "/events/\(escapePath(eventID))"), body: body,
+      as: DiscordScheduledEvent.self)
+  }
+
+  /// Removes a scheduled event.
+  @discardableResult
+  public func deleteDiscordEvent(_ id: String, eventID: String) async throws -> DiscordAck {
+    try await httpDelete(discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordAck.self)
+  }
+
+  /// The server's roster, or the members whose name starts with `query`.
+  public func discordMembers(_ id: String, query: String? = nil, limit: Int? = nil) async throws
+    -> [DiscordMember]
+  {
+    var search = Query()
+    search.add("q", query)
+    search.add("limit", limit)
+    return try await httpGet(discordPath(id, "/members"), query: search, as: [DiscordMember].self)
+  }
+
+  /// One member of the server.
+  public func discordMember(_ id: String, memberID: String) async throws -> DiscordMember {
+    try await httpGet(
+      discordPath(id, "/members/\(escapePath(memberID))"), as: DiscordMember.self)
+  }
+
+  /// The server's roles, highest first.
+  public func discordRoles(_ id: String) async throws -> [DiscordRole] {
+    try await httpGet(discordPath(id, "/roles"), as: [DiscordRole].self)
+  }
+
+  /// Adds a role to the server.
+  public func createDiscordRole(_ id: String, _ body: DiscordRoleRequest) async throws
+    -> DiscordRole
+  {
+    try await httpPost(discordPath(id, "/roles"), body: body, as: DiscordRole.self)
+  }
+
+  /// Changes a role on the server; a `nil` field is left as it is.
+  public func updateDiscordRole(_ id: String, roleID: String, _ body: DiscordRoleRequest)
+    async throws -> DiscordRole
+  {
+    try await httpPatch(
+      discordPath(id, "/roles/\(escapePath(roleID))"), body: body, as: DiscordRole.self)
+  }
+
+  /// Removes a role from the server.
+  @discardableResult
+  public func deleteDiscordRole(_ id: String, roleID: String) async throws -> DiscordAck {
+    try await httpDelete(discordPath(id, "/roles/\(escapePath(roleID))"), as: DiscordAck.self)
+  }
+
+  /// Gives a member a role.
+  @discardableResult
+  public func addDiscordMemberRole(_ id: String, roleID: String, memberID: String) async throws
+    -> DiscordAck
+  {
+    try await httpPut(memberRolePath(id, roleID, memberID), as: DiscordAck.self)
+  }
+
+  /// Takes a role from a member.
+  @discardableResult
+  public func removeDiscordMemberRole(_ id: String, roleID: String, memberID: String) async throws
+    -> DiscordAck
+  {
+    try await httpDelete(memberRolePath(id, roleID, memberID), as: DiscordAck.self)
+  }
+
+  private func discordPath(_ id: String, _ suffix: String) -> String {
+    "/accounts/\(escapePath(id))/discord\(suffix)"
+  }
+
+  private func memberRolePath(_ id: String, _ roleID: String, _ memberID: String) -> String {
+    discordPath(id, "/roles/\(escapePath(roleID))/members/\(escapePath(memberID))")
+  }
+  // MARK: - Per-network extras
+
+  /// Boards this Pinterest connection can pin to.
+  public func pinterestBoards(_ id: String) async throws -> [PinterestBoard] {
+    try await httpGet("/accounts/\(escapePath(id))/pinterest/boards", as: [PinterestBoard].self)
+  }
+
+  /// Creates a board on the connected Pinterest account.
+  public func createPinterestBoard(_ id: String, _ body: CreatePinterestBoardRequest) async throws
+    -> PinterestBoard
+  {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/pinterest/boards", body: body, as: PinterestBoard.self)
+  }
+
+  /// The channel's own playlists, with the stored default marked.
+  public func youtubePlaylists(_ id: String) async throws -> [YouTubePlaylist] {
+    try await httpGet("/accounts/\(escapePath(id))/youtube/playlists", as: [YouTubePlaylist].self)
+  }
+
+  /// Creates a playlist on the connected channel.
+  public func createYouTubePlaylist(_ id: String, _ body: CreateYouTubePlaylistRequest)
+    async throws -> YouTubePlaylist
+  {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/youtube/playlists", body: body, as: YouTubePlaylist.self)
+  }
+
+  /// The playlist a new video joins when the post picks none. `nil` clears it.
+  @discardableResult
+  public func setDefaultYouTubePlaylist(_ id: String, playlistID: String?) async throws -> String? {
+    struct Body: Encodable, Sendable {
+      let playlistID: String?
+      enum CodingKeys: String, CodingKey { case playlistID = "playlist_id" }
+      func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        // An explicit null is what clears the stored default.
+        try container.encode(playlistID, forKey: .playlistID)
+      }
+    }
+    struct Stored: Decodable, Sendable {
+      let playlistID: String?
+      enum CodingKeys: String, CodingKey { case playlistID = "playlist_id" }
+    }
+    let stored: Stored = try await httpPut(
+      "/accounts/\(escapePath(id))/youtube/playlists/default", body: Body(playlistID: playlistID),
+      as: Stored.self)
+    return stored.playlistID
+  }
+
+  /// Caption tracks on one of the channel's videos.
+  public func youtubeCaptions(_ id: String, videoID: String) async throws -> [YouTubeCaptionTrack] {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/youtube/videos/\(escapePath(videoID))/captions",
+      as: [YouTubeCaptionTrack].self)
+  }
+
+  /// Uploads a caption track to a video.
+  public func uploadYouTubeCaptions(
+    _ id: String, videoID: String, _ body: UploadYouTubeCaptionsRequest
+  ) async throws -> YouTubeCaptionTrack {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/youtube/videos/\(escapePath(videoID))/captions", body: body,
+      as: YouTubeCaptionTrack.self)
+  }
+
+  /// One caption track read back as text.
+  public func youtubeTranscript(_ id: String, captionID: String) async throws -> YouTubeTranscript {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/youtube/captions/\(escapePath(captionID))",
+      as: YouTubeTranscript.self)
+  }
+
+  /// What a post from this Bluesky connection is written in when it does not say.
+  public func blueskyLanguages(_ id: String) async throws -> BlueskyLanguages {
+    try await httpGet("/accounts/\(escapePath(id))/bluesky/languages", as: BlueskyLanguages.self)
+  }
+
+  /// Stores up to three BCP-47 tags. An empty array clears the default.
+  @discardableResult
+  public func setBlueskyLanguages(_ id: String, _ languages: [String]) async throws
+    -> BlueskyLanguages
+  {
+    struct Body: Encodable, Sendable { let languages: [String] }
+    return try await httpPut(
+      "/accounts/\(escapePath(id))/bluesky/languages", body: Body(languages: languages),
+      as: BlueskyLanguages.self)
+  }
+
+  /// The switches TikTok enforces at publish time, changed in the TikTok app.
+  public func tiktokCreatorInfo(_ id: String) async throws -> TikTokCreatorInfo {
+    try await httpGet("/accounts/\(escapePath(id))/tiktok/creator-info", as: TikTokCreatorInfo.self)
+  }
+
+  /// TikTok's Commercial Music Library. Needs the Marketing API product on the
+  /// TikTok app; without it the call throws rather than answering an empty list.
+  public func tiktokMusic(_ id: String, query: String, limit: Int? = nil) async throws
+    -> [TikTokMusic]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("limit", limit)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/tiktok/music", query: items, as: [TikTokMusic].self)
+  }
+
+  /// Places a post can be tagged with. Same TikTok product as the music library.
+  public func tiktokLocations(_ id: String, query: String, limit: Int? = nil) async throws
+    -> [TikTokPlace]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("limit", limit)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/tiktok/locations", query: items, as: [TikTokPlace].self)
+  }
+
+  /// Resolves a share link to one of this account's own videos, for repurposing.
+  public func tiktokVideoLookup(_ id: String, url: String) async throws -> TikTokVideoSource {
+    struct Body: Encodable, Sendable { let url: String }
+    return try await httpPost(
+      "/accounts/\(escapePath(id))/tiktok/video-download", body: Body(url: url),
+      as: TikTokVideoSource.self)
+  }
+
+  /// Tracks a Reel can carry. With no query Instagram answers with what is trending.
+  public func instagramAudio(_ id: String, query: String? = nil, audioType: String? = nil)
+    async throws -> [InstagramAudio]
+  {
+    var items = Query()
+    items.add("q", query)
+    items.add("audio_type", audioType)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/audio", query: items, as: [InstagramAudio].self)
+  }
+
+  /// How many posts are left before Instagram refuses the next one.
+  public func instagramPublishingLimit(_ id: String) async throws -> InstagramPublishingLimit {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/publishing-limit", as: InstagramPublishingLimit.self)
+  }
+
+  /// Stories still inside their 24 hours, posted through FoPost or not. Asking
+  /// for insights costs one extra call per story.
+  public func instagramStories(_ id: String, insights: Bool = false) async throws
+    -> [InstagramStory]
+  {
+    var items = Query()
+    if insights { items.add("insights", true) }
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/stories", query: items, as: [InstagramStory].self)
+  }
+
+  /// The insight set for one story.
+  public func instagramStoryInsights(_ id: String, storyID: String) async throws
+    -> InstagramStoryInsights
+  {
+    try await httpGet(
+      "/accounts/\(escapePath(id))/instagram/stories/\(escapePath(storyID))/insights",
+      as: InstagramStoryInsights.self)
+  }
+
+  /// Organizations a LinkedIn post can mention. People are not searchable:
+  /// LinkedIn has no public person search.
+  public func linkedinMentions(_ id: String, query: String) async throws -> [LinkedInMention] {
+    var items = Query()
+    items.add("q", query)
+    return try await httpGet(
+      "/accounts/\(escapePath(id))/linkedin/mentions", query: items, as: [LinkedInMention].self)
   }
 }
