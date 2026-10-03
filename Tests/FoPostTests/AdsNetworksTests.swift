@@ -54,7 +54,7 @@ final class AdsNetworksTests: XCTestCase {
 
     XCTAssertEqual(added.added, 2)
     let request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.path, "/v1/ads/audiences/urn%3Ali%3AadSegment%3A44/companies")
+    XCTAssertEqual(request.path, "/v1/ads/audiences/urn:li:adSegment:44/companies")
     let body = try request.bodyJSON()
     let companies = try XCTUnwrap(body["companies"] as? [[String: Any]])
     XCTAssertEqual(companies.first?["domain"] as? String, "northwind.example")
@@ -72,7 +72,7 @@ final class AdsNetworksTests: XCTestCase {
     XCTAssertEqual(accepted.accepted, 1)
     let request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(
-      request.path, "/v1/ads/linkedin/conversion-rules/urn%3Ali%3Aconversion%3A9/events")
+      request.path, "/v1/ads/linkedin/conversion-rules/urn:li:conversion:9/events")
     XCTAssertEqual(request.query["connection_id"], "conn_1")
   }
 }
