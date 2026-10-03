@@ -43,8 +43,7 @@ final class Transport: @unchecked Sendable {
 
   /// Sends bytes to a URL outside the API, unsigned and unretried, as a
   /// presigned upload needs.
-  func putRaw(to url: URL, method: String, headers: [String: String], body: Data) async throws
-  {
+  func putRaw(to url: URL, method: String, headers: [String: String], body: Data) async throws {
     var urlRequest = URLRequest(url: url, timeoutInterval: configuration.timeout)
     urlRequest.httpMethod = method
     urlRequest.httpBody = body

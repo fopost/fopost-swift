@@ -47,6 +47,15 @@ public struct AdsResource: Resource {
       "/ads/connections/meta/authorize", body: body, as: MetaAdsAuthorization.self)
   }
 
+  /// Starts a Google Ads connection. The caller finishes the login at the
+  /// returned URL in their own browser.
+  public func authorizeGoogle(_ body: ConnectGoogleAdsRequest) async throws
+    -> MetaAdsAuthorization
+  {
+    try await httpPost(
+      "/ads/connections/google/authorize", body: body, as: MetaAdsAuthorization.self)
+  }
+
   /// Removes a connection and every ad record created through it.
   @discardableResult
   public func deleteConnection(_ id: String, workspaceID: String) async throws -> MessageResponse {
