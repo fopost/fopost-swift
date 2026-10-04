@@ -67,9 +67,12 @@ final class AnalyticsTests: XCTestCase {
     let timeline = try await client.analytics.timeline("https://x.com/acme/status/1")
 
     let request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(
-      request.path,
-      "/v1/analytics/posts/https%3A%2F%2Fx.com%2Facme%2Fstatus%2F1/timeline")
+    // `url.path` decodes, which would hide the escaping this test exists to
+    // prove, so read the encoded form the request actually carried.
+    XCTAssertTrue(
+      request.url.absoluteString.hasSuffix(
+        "/v1/analytics/posts/https%3A%2F%2Fx.com%2Facme%2Fstatus%2F1/timeline"),
+      "the permalink must survive as one escaped path segment, got \(request.url)")
     // A post made on the network has no FoPost id
     XCTAssertNil(timeline.postId)
     XCTAssertEqual(timeline.deliveries?.first?.points?.first?.ageMinutes, 30)
