@@ -158,12 +158,16 @@ public struct AdTargeting: Codable, Sendable, Hashable {
   public var interests: [AdTargetingEntry]?
   public var behaviors: [AdTargetingEntry]?
   public var income: [AdTargetingEntry]?
+  /// Facets a network defines for itself, keyed by the targeting search type
+  /// they were found with. ``AdsResource/providers()`` reports which a network
+  /// accepts.
+  public var facets: [String: [AdTargetingEntry]]?
 
   public init(
     countries: [String], ageMin: Int, ageMax: Int, gender: AdGender = .all,
     audienceIds: [String]? = nil, locations: [AdLocation]? = nil,
     interests: [AdTargetingEntry]? = nil, behaviors: [AdTargetingEntry]? = nil,
-    income: [AdTargetingEntry]? = nil
+    income: [AdTargetingEntry]? = nil, facets: [String: [AdTargetingEntry]]? = nil
   ) {
     self.countries = countries
     self.ageMin = ageMin
@@ -174,6 +178,7 @@ public struct AdTargeting: Codable, Sendable, Hashable {
     self.interests = interests
     self.behaviors = behaviors
     self.income = income
+    self.facets = facets
   }
 }
 
@@ -384,10 +389,240 @@ public struct LeadsPage: Codable, Sendable, Hashable {
   public let nextCursor: String?
 }
 
-/// The Meta login URL ``AdsResource/authorizeMeta(_:)`` hands back.
+/// The login URL ``AdsResource/authorize(_:_:)`` hands back.
 public struct MetaAdsAuthorization: Codable, Sendable, Hashable {
   public let url: String
 }
+
+/// A token a network expands in a link's tracking parameters at delivery time.
+public struct AdTrackingMacro: Codable, Sendable, Hashable {
+  public let token: String?
+  public let description: String?
+}
+
+/// An ad network from the API's registry. `configured` false cannot be
+/// connected yet.
+public struct AdProvider: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// Logo slug.
+  public let logo: String?
+  public let configured: Bool?
+  public let connectMethods: [String]?
+  /// What the network supports: campaigns, audiences, conversions, forecasts,
+  /// adLibrary, and so on.
+  public let capabilities: [String: Bool]?
+  /// What ``AdsResource/searchTargeting(_:)`` accepts here, in picker order.
+  public let targetingFacets: [String]?
+  public let trackingMacros: [AdTrackingMacro]?
+}
+
+/// One row of a company-list upload. At least one of `name`, `domain`,
+/// `pageUrl` or `ticker` is required; the rows are never stored.
+public struct AdCompany: Codable, Sendable, Hashable {
+  public var name: String?
+  public var domain: String?
+  /// The company's page on the network.
+  public var pageUrl: String?
+  /// Stock ticker, where the network matches on one.
+  public var ticker: String?
+  public var country: String?
+
+  public init(
+    name: String? = nil, domain: String? = nil, pageUrl: String? = nil, ticker: String? = nil,
+    country: String? = nil
+  ) {
+    self.name = name
+    self.domain = domain
+    self.pageUrl = pageUrl
+    self.ticker = ticker
+    self.country = country
+  }
+}
+
+/// How many company rows the network took.
+public struct AddedAudienceCompanies: Codable, Sendable, Hashable {
+  public let added: Int?
+}
+
+/// The body of ``AdsResource/bidPricing(_:)`` and
+/// ``AdsResource/supplyForecast(_:)``.
+public struct AdForecastRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  /// The ad account as the network addresses it.
+  public var adAccountId: String
+  public var goal: AdGoal
+  public var targeting: AdTargeting
+  public var placements: [String]?
+  /// `CPC`, `CPM` or `CPV`. Bid pricing only.
+  public var bidType: String?
+  /// The budget for the forecast window. Supply forecast only.
+  public var budgetMinor: Int?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, goal: AdGoal,
+    targeting: AdTargeting, placements: [String]? = nil, bidType: String? = nil,
+    budgetMinor: Int? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.goal = goal
+    self.targeting = targeting
+    self.placements = placements
+    self.bidType = bidType
+    self.budgetMinor = budgetMinor
+  }
+}
+
+/// What the auction costs, in minor units of the ad account currency.
+public struct BidPricing: Codable, Sendable, Hashable {
+  public let currency: String?
+  public let suggestedBidMinor: Int?
+  public let minBidMinor: Int?
+  public let maxBidMinor: Int?
+  public let dailyBudgetFloorMinor: Int?
+}
+
+/// What an audience would deliver at a budget, over the network's own window.
+/// `ready` is false while the network has no answer for that audience.
+public struct SupplyForecast: Codable, Sendable, Hashable {
+  public let currency: String?
+  public let impressions: Int?
+  public let clicks: Int?
+  public let spendMinor: Int?
+  /// Days the numbers cover.
+  public let windowDays: Int?
+  public let ready: Bool?
+}
+
+/// How the network attributes a sale or a sign-up back to an ad set.
+public struct ConversionRule: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// `purchase`, `lead`, `sign_up`, `add_to_cart`, `download`, `install`,
+  /// `key_page_view` or `other`.
+  public let type: String?
+  /// `last_touch` or `each_campaign`.
+  public let attribution: String?
+  public let postClickWindowDays: Int?
+  public let viewThroughWindowDays: Int?
+  public let valueMinor: Int?
+  public let currency: String?
+  public let enabled: Bool?
+  public let createdAt: String?
+  /// Ad sets this rule is attached to.
+  public let campaignIds: [String]?
+}
+
+/// The rule ``AdsResource/createConversionRule(_:)`` made.
+public struct CreatedConversionRule: Codable, Sendable, Hashable {
+  public let id: String?
+}
+
+/// The body of ``AdsResource/createConversionRule(_:)``.
+public struct CreateConversionRuleRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var name: String
+  /// `purchase`, `lead`, `sign_up`, `add_to_cart`, `download`, `install`,
+  /// `key_page_view` or `other`.
+  public var type: String
+  /// `last_touch` or `each_campaign`.
+  public var attribution: String
+  public var postClickWindowDays: Int?
+  public var viewThroughWindowDays: Int?
+  /// What one conversion is worth, minor units.
+  public var valueMinor: Int?
+  public var currency: String?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, name: String, type: String,
+    attribution: String, postClickWindowDays: Int? = nil, viewThroughWindowDays: Int? = nil,
+    valueMinor: Int? = nil, currency: String? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.name = name
+    self.type = type
+    self.attribution = attribution
+    self.postClickWindowDays = postClickWindowDays
+    self.viewThroughWindowDays = viewThroughWindowDays
+    self.valueMinor = valueMinor
+    self.currency = currency
+  }
+}
+
+/// Changes to a conversion rule. Only the fields you set move.
+public struct UpdateConversionRuleRequest: Codable, Sendable {
+  public var name: String?
+  public var type: String?
+  public var attribution: String?
+  public var postClickWindowDays: Int?
+  public var viewThroughWindowDays: Int?
+  public var valueMinor: Int?
+  public var currency: String?
+  public var enabled: Bool?
+
+  public init(
+    name: String? = nil, type: String? = nil, attribution: String? = nil,
+    postClickWindowDays: Int? = nil, viewThroughWindowDays: Int? = nil, valueMinor: Int? = nil,
+    currency: String? = nil, enabled: Bool? = nil
+  ) {
+    self.name = name
+    self.type = type
+    self.attribution = attribution
+    self.postClickWindowDays = postClickWindowDays
+    self.viewThroughWindowDays = viewThroughWindowDays
+    self.valueMinor = valueMinor
+    self.currency = currency
+    self.enabled = enabled
+  }
+}
+
+/// What a conversion rule recorded over a date range.
+public struct ConversionMetrics: Codable, Sendable, Hashable {
+  public let conversions: Int?
+  public let postClickConversions: Int?
+  public let viewThroughConversions: Int?
+  public let valueMinor: Int?
+  public let costPerConversionMinor: Int?
+}
+
+/// One conversion sent back to the network. It needs an `email` or a
+/// `clickId`; the address is hashed inside the API and nothing is stored.
+public struct ConversionApiEvent: Codable, Sendable, Hashable {
+  /// Epoch milliseconds.
+  public var happenedAt: Int
+  public var valueMinor: Int?
+  public var currency: String?
+  /// Your own id for the event, so a replay is counted once.
+  public var eventId: String?
+  public var email: String?
+  /// The network's click id, as the landing page received it.
+  public var clickId: String?
+
+  public init(
+    happenedAt: Int, valueMinor: Int? = nil, currency: String? = nil, eventId: String? = nil,
+    email: String? = nil, clickId: String? = nil
+  ) {
+    self.happenedAt = happenedAt
+    self.valueMinor = valueMinor
+    self.currency = currency
+    self.eventId = eventId
+    self.email = email
+    self.clickId = clickId
+  }
+}
+
+/// How many conversion events the network took.
+public struct AcceptedConversionEvents: Codable, Sendable, Hashable {
+  public let accepted: Int?
+}
+
 
 /// The audience ``AdsResource/createAudience(_:)`` made.
 public struct CreatedAudience: Codable, Sendable, Hashable {
@@ -474,6 +709,10 @@ public struct CreateAdRequest: Codable, Sendable {
   /// Query string appended to every link in the ad, e.g.
   /// `utm_source=meta&utm_medium=paid`.
   public var urlTags: String?
+  /// A post already live on the network, from ``AdsResource/sparkPosts(_:)``.
+  /// Runs it as a Spark ad, so `text`, `headline` and `mediaUrl` are ignored.
+  /// Needs the network's `sparkAds` capability.
+  public var sparkPostId: String?
   /// Create the ad paused; set to `false` to go live at once.
   public var paused: Bool?
 
@@ -481,7 +720,7 @@ public struct CreateAdRequest: Codable, Sendable {
     workspaceId: String, connectionId: String, adAccountId: String, pageId: String, name: String,
     goal: AdGoal, budget: AdBudget, targeting: AdTargeting, text: String,
     headline: String? = nil, destinationUrl: String? = nil, mediaUrl: String? = nil,
-    urlTags: String? = nil, paused: Bool? = nil
+    urlTags: String? = nil, sparkPostId: String? = nil, paused: Bool? = nil
   ) {
     self.workspaceId = workspaceId
     self.connectionId = connectionId
@@ -495,6 +734,7 @@ public struct CreateAdRequest: Codable, Sendable {
     self.headline = headline
     self.destinationUrl = destinationUrl
     self.mediaUrl = mediaUrl
+    self.sparkPostId = sparkPostId
     self.urlTags = urlTags
     self.paused = paused
   }
@@ -947,10 +1187,13 @@ public struct CreateAdCampaignRequest: Codable, Sendable {
   public var name: String
   public var goal: AdGoal
   public var paused: Bool?
+  /// Hands targeting and creative rotation to the network. Needs its
+  /// `smartPlus` capability.
+  public var smartPlus: Bool?
 
   public init(
     workspaceId: String, connectionId: String, adAccountId: String, name: String, goal: AdGoal,
-    paused: Bool? = nil
+    paused: Bool? = nil, smartPlus: Bool? = nil
   ) {
     self.workspaceId = workspaceId
     self.connectionId = connectionId
@@ -958,6 +1201,7 @@ public struct CreateAdCampaignRequest: Codable, Sendable {
     self.name = name
     self.goal = goal
     self.paused = paused
+    self.smartPlus = smartPlus
   }
 }
 
@@ -1215,6 +1459,18 @@ struct AddAudienceUsersRequest: Codable, Sendable {
   var emails: [String]
 }
 
+struct AddAudienceCompaniesRequest: Codable, Sendable {
+  var companies: [AdCompany]
+}
+
+struct ConversionAssociationRequest: Codable, Sendable {
+  var campaignId: String
+}
+
+struct ConversionEventsRequest: Codable, Sendable {
+  var events: [ConversionApiEvent]
+}
+
 struct ArchiveLeadFormRequest: Codable, Sendable {
   var workspaceId: String
   var connectionId: String
@@ -1320,5 +1576,189 @@ public struct LeadsFeedParams: Sendable {
     query.add("cursor", cursor)
     query.add("limit", limit)
     return query
+  }
+}
+
+// MARK: - Identities, Spark posts, conversions and ad comments
+
+/// A Business Center, or the network's equivalent grouping of ad accounts.
+public struct AdBusinessCenter: Codable, Sendable, Identifiable {
+  public var id: String
+  public var name: String
+  public var role: String?
+}
+
+/// The account an ad runs as. Meta calls it a Page, TikTok an identity; an
+/// identity id is what every route calls a `pageId`.
+public struct AdIdentity: Codable, Sendable, Identifiable {
+  public var id: String
+  /// The network's own identity kind, e.g. `CUSTOMIZED_USER`.
+  public var type: String
+  public var name: String
+  public var avatarUrl: String?
+}
+
+/// A post already live on the network, offered as the source of a Spark ad.
+public struct SparkPost: Codable, Sendable, Identifiable {
+  public var id: String
+  public var identityId: String
+  public var caption: String?
+  public var thumbnailUrl: String?
+  public var createdAt: String?
+  public var views: Int?
+}
+
+/// A comment on an ad, read live from the network and never stored.
+public struct AdComment: Codable, Sendable, Identifiable {
+  public var id: String
+  public var adId: String?
+  public var text: String
+  public var authorName: String?
+  public var authorAvatarUrl: String?
+  public var createdAt: String?
+  public var likes: Int
+  public var replyCount: Int
+  public var hidden: Bool
+  /// The comment this one answers, when it is not on the ad itself.
+  public var parentId: String?
+}
+
+/// One page of an ad's comments. Pass `nextCursor` back as `after`.
+public struct AdCommentsPage: Codable, Sendable {
+  public var comments: [AdComment]
+  public var nextCursor: String?
+}
+
+/// Which identity's posts ``AdsResource/sparkPosts(_:)`` reads.
+public struct SparkPostsParams: Sendable {
+  public var connectionID: String
+  public var adAccountID: String
+  public var identityID: String
+  public var workspaceID: String?
+
+  public init(
+    connectionID: String, adAccountID: String, identityID: String, workspaceID: String? = nil
+  ) {
+    self.connectionID = connectionID
+    self.adAccountID = adAccountID
+    self.identityID = identityID
+    self.workspaceID = workspaceID
+  }
+
+  var query: Query {
+    var query = Query()
+    query.add("workspace_id", workspaceID)
+    query.add("connection_id", connectionID)
+    query.add("ad_account_id", adAccountID)
+    query.add("identity_id", identityID)
+    return query
+  }
+}
+
+/// Which ad's comments ``AdsResource/comments(_:)`` reads, and from where.
+public struct AdCommentsParams: Sendable {
+  public var connectionID: String
+  public var adID: String
+  /// The previous page's `nextCursor`.
+  public var after: String?
+  public var workspaceID: String?
+
+  public init(
+    connectionID: String, adID: String, after: String? = nil, workspaceID: String? = nil
+  ) {
+    self.connectionID = connectionID
+    self.adID = adID
+    self.after = after
+    self.workspaceID = workspaceID
+  }
+
+  var query: Query {
+    var query = Query()
+    query.add("workspace_id", workspaceID)
+    query.add("connection_id", connectionID)
+    query.add("ad_id", adID)
+    query.add("after", after)
+    return query
+  }
+}
+
+/// One offline conversion. Identifiers are hashed by the API before anything
+/// leaves FoPost.
+public struct ConversionEvent: Codable, Sendable {
+  public var eventName: String
+  /// ISO 8601.
+  public var occurredAt: String
+  public var email: String?
+  public var phone: String?
+  /// Account currency, minor units.
+  public var valueMinor: Int?
+  public var currency: String?
+  public var orderId: String?
+
+  public init(
+    eventName: String, occurredAt: String, email: String? = nil, phone: String? = nil,
+    valueMinor: Int? = nil, currency: String? = nil, orderId: String? = nil
+  ) {
+    self.eventName = eventName
+    self.occurredAt = occurredAt
+    self.email = email
+    self.phone = phone
+    self.valueMinor = valueMinor
+    self.currency = currency
+    self.orderId = orderId
+  }
+}
+
+/// The body of ``AdsResource/uploadConversions(_:)``.
+public struct UploadConversionsRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  /// A pixel the ad account owns, from ``AdsResource/audiences(_:)``.
+  public var pixelId: String
+  /// Up to 1000 per call.
+  public var events: [ConversionEvent]
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, pixelId: String,
+    events: [ConversionEvent]
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.pixelId = pixelId
+    self.events = events
+  }
+}
+
+/// How many events the network accepted.
+public struct ConversionsAccepted: Codable, Sendable {
+  public var accepted: Int
+}
+
+/// The reply's id on the network.
+public struct AdCommentReply: Codable, Sendable {
+  public var replyId: String
+}
+
+/// Scopes a comment write; the comment id travels in the path.
+public struct AdCommentRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adId: String
+  /// The reply, on ``AdsResource/replyToComment(_:_:)`` only.
+  public var text: String?
+  /// The new state, on ``AdsResource/setCommentHidden(_:_:)`` only.
+  public var hidden: Bool?
+
+  public init(
+    workspaceId: String, connectionId: String, adId: String, text: String? = nil,
+    hidden: Bool? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adId = adId
+    self.text = text
+    self.hidden = hidden
   }
 }
