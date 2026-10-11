@@ -136,6 +136,7 @@ let post = try await client.posts.create(
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
+| `client.blog` | Blog articles for a website: settings and the website signing secret, the keyword plan, and articles from request through publish |
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
 | `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
@@ -202,6 +203,34 @@ _ = try await client.sequences.enroll(sequence.id, EnrollRequest(contactIDs: [co
 // Nothing further fires for them.
 _ = try await client.sequences.unenroll(sequence.id, [contactID])
 ```
+
+## Blog
+
+An article goes to a website, a post goes to a social network. `client.blog` plans keywords, writes articles from them, and publishes to the target in the settings: the product blog, a connected account, or your own website.
+
+Every call names the workspace. Reading, settings and keyword edits need the `posts` scope; `planKeywords`, `requestArticle` and `regenerateArticle` spend AI credits and need `ai` (an empty balance is `.paymentRequired` with `upgradeURL`); `publishArticle` needs `publish` and answers `.conflict` with code `no_target` until a target is set.
+
+```swift
+let article = try await client.blog.requestArticle(
+  workspaceID: workspaceID,
+  RequestBlogArticleRequest(keyword: "best time to post", instructions: "Lead with the data."))
+
+// Queued, then written in the background. Poll, or subscribe to `article.published`.
+let full = try await client.blog.getArticle(workspaceID: workspaceID, article.id)
+print(full.status as Any, full.wordCount as Any)
+```
+
+The website target POSTs each published article to `websiteUrl`, signed with the secret that `updateSettings` returns once when the URL is first set (`rotateWebsiteSecret` issues a new one). Verify over the raw request bytes, never re-serialised JSON:
+
+```swift
+let envelope = try FoPostWebhook.verify(rawBody: rawBody, headers: headers, secret: secret)
+if envelope.event == .articlePublished {
+  let article: BlogArticleWebhookPayload = try envelope.decodeData()
+  // Image URLs are fetchable for six hours; store your own copy.
+}
+```
+
+`FoPostWebhook.verify` prefers the timestamped `X-FoPost-Signature-256` header and refuses a timestamp more than five minutes away; it falls back to the plain `X-FoPost-Signature` only when no timestamp was sent. It throws `WebhookVerificationError` and works for every FoPost webhook, not just the blog.
 
 ## Inbox and ads
 

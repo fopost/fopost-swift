@@ -48,7 +48,8 @@ they are prefixed so a resource can define its own `get`/`delete` without
 shadowing them.
 
 Coverage: posts, workspaces, accounts, communities, labels, webhooks,
-analytics, automations, media, inbox, contacts, broadcasts, sequences, and ads. Inbox skips `/inbox/chat/*`
+analytics, automations, media, inbox, contacts, broadcasts, sequences, ads, and blog.
+`FoPostWebhook.verify` checks an inbound webhook's signature over the raw bytes. Inbox skips `/inbox/chat/*`
 (browser-encrypted X Chat) and the binary `/inbox/{id}/attachments/{index}`
 stream. Ads doc comments name the spending calls (`boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and the campaign, ad set, and network ad
