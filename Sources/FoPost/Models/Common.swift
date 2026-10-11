@@ -202,11 +202,13 @@ public struct WebhookEvent: FoPostStringEnum {
   public static let deliveryFailed: Self = "delivery.failed"
   public static let deliveryDelayed: Self = "delivery.delayed"
   public static let accountHealthChanged: Self = "account.health_changed"
+  /// A blog article went live; `data` is a ``BlogArticleWebhookPayload``.
+  public static let articlePublished: Self = "article.published"
 
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .postPublished, .postFailed, .postPartiallyFailed, .deliveryPublished, .deliveryFailed,
-    .deliveryDelayed, .accountHealthChanged,
+    .deliveryDelayed, .accountHealthChanged, .articlePublished,
   ]
 }
 
