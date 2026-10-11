@@ -104,6 +104,9 @@ public final class FoPostClient: Sendable {
   /// Google Ads only: keywords, assets, conversions, and raw GAQL. Campaigns,
   /// ad groups, ads, audiences, and insights are on ``ads``.
   public var googleAds: GoogleAdsResource { GoogleAdsResource(transport: transport) }
+  /// Blog articles: the keyword plan, the articles written from it, and
+  /// where they are published.
+  public var blog: BlogResource { BlogResource(transport: transport) }
   /// Content, length, and media checks that create nothing.
   public var validate: ValidateResource { ValidateResource(transport: transport) }
 
