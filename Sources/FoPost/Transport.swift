@@ -51,8 +51,26 @@ final class Transport: @unchecked Sendable {
       urlRequest.setValue(value, forHTTPHeaderField: name)
     }
     urlRequest.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
+    try await sendRaw { try await session.data(for: urlRequest) }
+  }
+
+  /// Streams a file off disk to a URL outside the API, so a multi-gigabyte
+  /// upload never sits in memory.
+  func putRaw(to url: URL, method: String, headers: [String: String], fromFile file: URL, size: Int64)
+    async throws
+  {
+    var urlRequest = URLRequest(url: url, timeoutInterval: configuration.timeout)
+    urlRequest.httpMethod = method
+    for (name, value) in headers {
+      urlRequest.setValue(value, forHTTPHeaderField: name)
+    }
+    urlRequest.setValue(String(size), forHTTPHeaderField: "Content-Length")
+    try await sendRaw { try await session.upload(for: urlRequest, fromFile: file) }
+  }
+
+  private func sendRaw(_ exchange: () async throws -> (Data, URLResponse)) async throws {
     do {
-      let (data, response) = try await session.data(for: urlRequest)
+      let (data, response) = try await exchange()
       guard let http = response as? HTTPURLResponse else {
         throw FoPostError.decoding(message: "The response was not an HTTP response.", body: data)
       }
