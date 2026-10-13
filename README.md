@@ -87,12 +87,60 @@ let content = [ContentBlock(text: "Numbers are in", media: [uploaded.asMediaItem
 A direct upload sends the bytes to storage instead of through the API:
 `uploadDirect` presigns, PUTs the file, and completes it in one call, and
 `presign` plus `complete(uploadID:)` are there when you want to PUT the bytes
-yourself.
+yourself. Pass a file URL and the file is streamed off disk, so a
+multi-gigabyte video never sits in memory.
 
 ```swift
 let uploaded = try await client.media.uploadDirect(
-    workspaceID: workspace.id, filename: "chart.png", mimeType: "image/png",
-    data: try Data(contentsOf: URL(fileURLWithPath: "chart.png")))
+    workspaceID: workspace.id, fileURL: URL(fileURLWithPath: "launch.mp4"))
+```
+
+`PresignOptions` places the asset as it lands: a `folderID`, a `brandRole`
+(`logo`, `product`, `person`, `background`) with its `brandVoiceID`, and the
+`personConsent` a `person` asset requires.
+
+### Files on posts
+
+`create(_:files:)` and `update(_:_:files:)` take up to five files and attach
+them to the post's first content block. The SDK picks the route: files within
+the multipart ceiling travel with the post in one request, anything bigger goes
+through a direct upload first and is attached by URL. Either way you get the
+post back.
+
+```swift
+let post = try await client.posts.create(
+    CreatePostRequest(
+        workspaceID: workspace.id,
+        accounts: accounts.map(\.id),
+        content: .text("Launch day")),
+    files: [
+        UploadFile(contentsOf: URL(fileURLWithPath: "launch.mp4")),
+        UploadFile(name: "cover.png", data: coverBytes),
+    ])
+```
+
+On an update with no `content`, the post's current blocks are kept and the
+files are appended to the first one.
+
+### Upload limits
+
+`client.media.limits(workspaceID:)` reports what the account may upload:
+`maxFileBytes` is the largest file by any route (it grows with connected
+accounts, or with the Large Uploads add-on), `multipartMaxFileBytes` is the most
+one file may carry in a multipart request, and `nextTier` says what more
+accounts would unlock. An oversize file answers with a 413 `file_too_large`;
+`error.maxFileBytes` and `error.upgradeURL` carry the ceiling and where to
+raise it.
+
+```swift
+let limits = try await client.media.limits(workspaceID: workspace.id)
+print(limits.maxFileBytes, limits.multipartMaxFileBytes)
+
+do {
+    try await client.posts.create(request, files: [bigVideo])
+} catch let error as FoPostError where error.status == 413 {
+    print("Files up to \(error.maxFileBytes ?? 0) bytes", error.upgradeURL ?? "")
+}
 ```
 
 ## Scheduling and publishing
@@ -120,7 +168,7 @@ let post = try await client.posts.create(
 
 | Namespace | Covers |
 | --- | --- |
-| `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
+| `client.posts` | List, create, update (both with files attached), publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
 | `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription, per-network metrics |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
@@ -129,7 +177,7 @@ let post = try await client.posts.create(
 | `client.webhooks` | Outbound event subscriptions |
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost |
 | `client.automations` | Automations, runs, stats, manual triggers |
-| `client.media` | The media library, uploads, and direct (presigned) uploads |
+| `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
@@ -374,7 +422,7 @@ do {
 | `.conflict` | 409 |
 | `.rateLimited` | 429 — carries `retryAfter` |
 | `.server` | 5xx |
-| `.api` | anything else |
+| `.api` | anything else, including 413 `file_too_large` — carries `maxFileBytes` and `upgradeURL` |
 | `.transport` | the request never reached the API |
 | `.decoding` / `.encoding` / `.configuration` | client-side |
 
