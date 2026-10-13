@@ -63,12 +63,12 @@ extension Resource {
       as: Response.self)
   }
 
-  func httpUpload<Response: Decodable>(_ path: String, form: MultipartForm, as type: Response.Type)
-    async throws -> Response
-  {
+  func httpUpload<Response: Decodable>(
+    _ path: String, method: String = "POST", form: MultipartForm, as type: Response.Type
+  ) async throws -> Response {
     try await transport.send(
       HTTPRequest(
-        method: "POST", path: path, body: form.encoded(), contentType: form.contentType,
+        method: method, path: path, body: form.encoded(), contentType: form.contentType,
         unwrap: true),
       as: Response.self)
   }
