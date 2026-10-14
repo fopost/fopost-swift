@@ -1,0 +1,479 @@
+import Foundation
+
+/// Where an article stands, from the request to the live page.
+public struct BlogArticleStatus: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let queued: Self = "queued"
+  public static let writing: Self = "writing"
+  public static let draft: Self = "draft"
+  public static let scheduled: Self = "scheduled"
+  public static let publishing: Self = "publishing"
+  public static let published: Self = "published"
+  public static let failed: Self = "failed"
+  public static let rejected: Self = "rejected"
+}
+
+/// Where a keyword stands in the plan.
+public struct BlogKeywordStatus: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let suggested: Self = "suggested"
+  public static let planned: Self = "planned"
+  public static let written: Self = "written"
+  public static let dismissed: Self = "dismissed"
+}
+
+/// Where a published article goes.
+public struct BlogTargetKind: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  /// The blog hosted with the product.
+  public static let productBlog: Self = "product_blog"
+  /// A connected account that takes long-form articles.
+  public static let account: Self = "account"
+  /// Your own website, reached through the signed `article.published` webhook.
+  public static let website: Self = "website"
+}
+
+/// Who asked for a keyword.
+public struct BlogKeywordSource: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let provider: Self = "provider"
+  public static let user: Self = "user"
+  public static let agent: Self = "agent"
+}
+
+/// Who asked for an article.
+public struct BlogArticleOrigin: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let plan: Self = "plan"
+  public static let user: Self = "user"
+  public static let agent: Self = "agent"
+}
+
+/// The image quality tier articles are illustrated at.
+public struct BlogImageTier: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let draft: Self = "draft"
+  public static let standard: Self = "standard"
+  public static let best: Self = "best"
+}
+
+/// How a workspace's blog is planned, written, and published.
+public struct BlogSettings: Codable, Sendable, Hashable {
+  public let siteUrl: String?
+  public let topic: String?
+  public let audience: String?
+  public let language: String?
+  public let locationCode: Int?
+  /// Articles planned per week; 0 turns planning off.
+  public let cadencePerWeek: Int?
+  /// Days a draft waits for review before it may auto-publish.
+  public let reviewHoldDays: Int?
+  public let autoPublish: Bool?
+  public let imageTier: BlogImageTier?
+  public let inBodyImages: Int?
+  public let minWords: Int?
+  public let maxWords: Int?
+  public let brandVoiceID: String?
+  public let targetKind: BlogTargetKind?
+  public let targetAccountID: String?
+  public let targetPlatform: String?
+  public let websiteUrl: String?
+  public let hasWebsiteSecret: Bool?
+  /// Whether search volume and difficulty can be fetched on this deployment.
+  public let keywordDataAvailable: Bool?
+  public let updatedAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case siteUrl, topic, audience, language, locationCode, cadencePerWeek, reviewHoldDays
+    case autoPublish, imageTier, inBodyImages, minWords, maxWords, targetKind, targetPlatform
+    case websiteUrl, hasWebsiteSecret, keywordDataAvailable, updatedAt
+    case brandVoiceID = "brandVoiceId"
+    case targetAccountID = "targetAccountId"
+  }
+}
+
+/// The answer to ``BlogResource/updateSettings(workspaceID:_:)``.
+public struct BlogSettingsUpdated: Codable, Sendable, Hashable {
+  public let data: BlogSettings
+  /// The website signing secret, present only on the call that first set
+  /// `websiteUrl`. Store it now; it is never shown again.
+  public let websiteSecret: String?
+}
+
+/// A freshly rotated website signing secret, shown once.
+public struct BlogWebsiteSecret: Codable, Sendable, Hashable {
+  public let websiteSecret: String
+}
+
+/// What the website target answered to a test delivery.
+public struct BlogWebsiteTest: Codable, Sendable, Hashable {
+  public let ok: Bool
+  public let status: Int?
+  public let error: String?
+}
+
+/// The body of ``BlogResource/updateSettings(workspaceID:_:)``. Only the
+/// fields you set are sent; a nullable field set to `.some(nil)` is cleared.
+public struct UpdateBlogSettingsRequest: Codable, Sendable {
+  public var siteUrl: String??
+  public var topic: String??
+  public var audience: String??
+  public var language: String?
+  public var locationCode: Int?
+  public var cadencePerWeek: Int?
+  public var reviewHoldDays: Int?
+  public var autoPublish: Bool?
+  public var imageTier: BlogImageTier?
+  public var inBodyImages: Int?
+  public var minWords: Int?
+  public var maxWords: Int?
+  public var brandVoiceID: String??
+  public var targetKind: BlogTargetKind??
+  public var targetAccountID: String??
+  /// Where published articles are POSTed as a signed webhook. Setting it
+  /// issues a secret, returned once on ``BlogSettingsUpdated/websiteSecret``.
+  public var websiteUrl: String??
+
+  public init(
+    siteUrl: String?? = nil, topic: String?? = nil, audience: String?? = nil,
+    language: String? = nil, locationCode: Int? = nil, cadencePerWeek: Int? = nil,
+    reviewHoldDays: Int? = nil, autoPublish: Bool? = nil, imageTier: BlogImageTier? = nil,
+    inBodyImages: Int? = nil, minWords: Int? = nil, maxWords: Int? = nil,
+    brandVoiceID: String?? = nil, targetKind: BlogTargetKind?? = nil,
+    targetAccountID: String?? = nil, websiteUrl: String?? = nil
+  ) {
+    self.siteUrl = siteUrl
+    self.topic = topic
+    self.audience = audience
+    self.language = language
+    self.locationCode = locationCode
+    self.cadencePerWeek = cadencePerWeek
+    self.reviewHoldDays = reviewHoldDays
+    self.autoPublish = autoPublish
+    self.imageTier = imageTier
+    self.inBodyImages = inBodyImages
+    self.minWords = minWords
+    self.maxWords = maxWords
+    self.brandVoiceID = brandVoiceID
+    self.targetKind = targetKind
+    self.targetAccountID = targetAccountID
+    self.websiteUrl = websiteUrl
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case siteUrl, topic, audience, language, locationCode, cadencePerWeek, reviewHoldDays
+    case autoPublish, imageTier, inBodyImages, minWords, maxWords, targetKind, websiteUrl
+    case brandVoiceID = "brandVoiceId"
+    case targetAccountID = "targetAccountId"
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    // Outer nil leaves the key out, inner nil sends null to clear the value.
+    if let siteUrl { try container.encode(siteUrl, forKey: .siteUrl) }
+    if let topic { try container.encode(topic, forKey: .topic) }
+    if let audience { try container.encode(audience, forKey: .audience) }
+    try container.encodeIfPresent(language, forKey: .language)
+    try container.encodeIfPresent(locationCode, forKey: .locationCode)
+    try container.encodeIfPresent(cadencePerWeek, forKey: .cadencePerWeek)
+    try container.encodeIfPresent(reviewHoldDays, forKey: .reviewHoldDays)
+    try container.encodeIfPresent(autoPublish, forKey: .autoPublish)
+    try container.encodeIfPresent(imageTier, forKey: .imageTier)
+    try container.encodeIfPresent(inBodyImages, forKey: .inBodyImages)
+    try container.encodeIfPresent(minWords, forKey: .minWords)
+    try container.encodeIfPresent(maxWords, forKey: .maxWords)
+    if let brandVoiceID { try container.encode(brandVoiceID, forKey: .brandVoiceID) }
+    if let targetKind { try container.encode(targetKind, forKey: .targetKind) }
+    if let targetAccountID { try container.encode(targetAccountID, forKey: .targetAccountID) }
+    if let websiteUrl { try container.encode(websiteUrl, forKey: .websiteUrl) }
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    siteUrl = try container.decodeIfPresent(String?.self, forKey: .siteUrl)
+    topic = try container.decodeIfPresent(String?.self, forKey: .topic)
+    audience = try container.decodeIfPresent(String?.self, forKey: .audience)
+    language = try container.decodeIfPresent(String.self, forKey: .language)
+    locationCode = try container.decodeIfPresent(Int.self, forKey: .locationCode)
+    cadencePerWeek = try container.decodeIfPresent(Int.self, forKey: .cadencePerWeek)
+    reviewHoldDays = try container.decodeIfPresent(Int.self, forKey: .reviewHoldDays)
+    autoPublish = try container.decodeIfPresent(Bool.self, forKey: .autoPublish)
+    imageTier = try container.decodeIfPresent(BlogImageTier.self, forKey: .imageTier)
+    inBodyImages = try container.decodeIfPresent(Int.self, forKey: .inBodyImages)
+    minWords = try container.decodeIfPresent(Int.self, forKey: .minWords)
+    maxWords = try container.decodeIfPresent(Int.self, forKey: .maxWords)
+    brandVoiceID = try container.decodeIfPresent(String?.self, forKey: .brandVoiceID)
+    targetKind = try container.decodeIfPresent(BlogTargetKind?.self, forKey: .targetKind)
+    targetAccountID = try container.decodeIfPresent(String?.self, forKey: .targetAccountID)
+    websiteUrl = try container.decodeIfPresent(String?.self, forKey: .websiteUrl)
+  }
+}
+
+/// One keyword in the plan.
+public struct BlogKeyword: Codable, Sendable, Hashable {
+  public let id: String
+  public let keyword: String
+  public let searchVolume: Int?
+  /// 0 to 100.
+  public let difficulty: Int?
+  public let cpc: Double?
+  public let intent: String?
+  public let source: BlogKeywordSource?
+  public let status: BlogKeywordStatus?
+  /// The day an article on it is planned for, as `YYYY-MM-DD`.
+  public let plannedFor: String?
+  public let createdAt: Date?
+}
+
+/// The body of ``BlogResource/addKeyword(workspaceID:_:)``.
+public struct AddBlogKeywordRequest: Codable, Sendable {
+  public var keyword: String
+  /// `YYYY-MM-DD`.
+  public var plannedFor: String?
+
+  public init(keyword: String, plannedFor: String? = nil) {
+    self.keyword = keyword
+    self.plannedFor = plannedFor
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(keyword, forKey: .keyword)
+    try container.encodeIfPresent(plannedFor, forKey: .plannedFor)
+  }
+}
+
+/// The body of ``BlogResource/updateKeyword(workspaceID:_:_:)``. Only the
+/// fields you set are sent; `plannedFor: .some(nil)` takes it off the calendar.
+public struct UpdateBlogKeywordRequest: Codable, Sendable {
+  public var status: BlogKeywordStatus?
+  public var plannedFor: String??
+
+  public init(status: BlogKeywordStatus? = nil, plannedFor: String?? = nil) {
+    self.status = status
+    self.plannedFor = plannedFor
+  }
+
+  enum CodingKeys: String, CodingKey { case status, plannedFor }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(status, forKey: .status)
+    if let plannedFor { try container.encode(plannedFor, forKey: .plannedFor) }
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    status = try container.decodeIfPresent(BlogKeywordStatus.self, forKey: .status)
+    plannedFor = try container.decodeIfPresent(String?.self, forKey: .plannedFor)
+  }
+}
+
+/// The body of ``BlogResource/planKeywords(workspaceID:seeds:)``.
+struct PlanBlogKeywordsRequest: Codable, Sendable {
+  var workspaceId: String
+  var seeds: [String]?
+
+  func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(workspaceId, forKey: .workspaceId)
+    try container.encodeIfPresent(seeds, forKey: .seeds)
+  }
+}
+
+/// The answer to a queued job.
+public struct BlogQueued: Codable, Sendable, Hashable {
+  public let status: String
+}
+
+/// One image on an article. The URL is fetchable for six hours; download and
+/// store your own copy.
+public struct BlogArticleImage: Codable, Sendable, Hashable {
+  public let mediaID: String
+  public let url: String
+  public let alt: String
+  /// Index of the outline heading the image sits under; absent on the
+  /// featured image.
+  public let position: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case url, alt, position
+    case mediaID = "mediaId"
+  }
+}
+
+/// An article as a listing shows it: everything but the body.
+public struct BlogArticle: Codable, Sendable, Hashable {
+  public let id: String
+  public let title: String
+  public let slug: String
+  public let keyword: String?
+  public let excerpt: String?
+  public let metaTitle: String?
+  public let metaDescription: String?
+  public let featuredImage: BlogArticleImage?
+  public let tags: [String]?
+  public let wordCount: Int?
+  public let status: BlogArticleStatus?
+  public let origin: BlogArticleOrigin?
+  public let reviewUntil: Date?
+  public let publishAt: Date?
+  public let publishedAt: Date?
+  public let publishedUrl: String?
+  public let error: String?
+  public let createdAt: Date?
+  public let updatedAt: Date?
+}
+
+/// An article with its body, outline, brief, and images.
+public struct BlogArticleFull: Codable, Sendable, Hashable {
+  public let id: String
+  public let title: String
+  public let slug: String
+  public let keyword: String?
+  public let excerpt: String?
+  public let metaTitle: String?
+  public let metaDescription: String?
+  public let featuredImage: BlogArticleImage?
+  public let tags: [String]?
+  public let wordCount: Int?
+  public let status: BlogArticleStatus?
+  public let origin: BlogArticleOrigin?
+  public let reviewUntil: Date?
+  public let publishAt: Date?
+  public let publishedAt: Date?
+  public let publishedUrl: String?
+  public let error: String?
+  public let createdAt: Date?
+  public let updatedAt: Date?
+  public let instructions: String?
+  public let outline: [String]?
+  /// The research the writer worked from.
+  public let brief: JSONValue?
+  public let bodyMarkdown: String?
+  public let bodyHtml: String?
+  public let images: [BlogArticleImage]?
+}
+
+/// The body of ``BlogResource/requestArticle(workspaceID:_:)``. One of
+/// `title`, `keyword` or `keywordID` is required.
+public struct RequestBlogArticleRequest: Codable, Sendable {
+  public var title: String?
+  public var keyword: String?
+  /// A keyword from the plan; its term becomes the target.
+  public var keywordID: String?
+  public var instructions: String?
+
+  public init(
+    title: String? = nil, keyword: String? = nil, keywordID: String? = nil,
+    instructions: String? = nil
+  ) {
+    self.title = title
+    self.keyword = keyword
+    self.keywordID = keywordID
+    self.instructions = instructions
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case title, keyword, instructions
+    case keywordID = "keywordId"
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(title, forKey: .title)
+    try container.encodeIfPresent(keyword, forKey: .keyword)
+    try container.encodeIfPresent(keywordID, forKey: .keywordID)
+    try container.encodeIfPresent(instructions, forKey: .instructions)
+  }
+}
+
+/// The body of ``BlogResource/updateArticle(workspaceID:_:_:)``. Only the
+/// fields you set are sent; a nullable field set to `.some(nil)` is cleared.
+public struct UpdateBlogArticleRequest: Codable, Sendable {
+  public var title: String?
+  public var slug: String?
+  public var excerpt: String??
+  public var metaTitle: String??
+  public var metaDescription: String??
+  public var bodyMarkdown: String?
+  public var tags: [String]?
+  /// Puts the draft on the calendar; `.some(nil)` returns it to review.
+  public var publishAt: Date??
+
+  public init(
+    title: String? = nil, slug: String? = nil, excerpt: String?? = nil,
+    metaTitle: String?? = nil, metaDescription: String?? = nil, bodyMarkdown: String? = nil,
+    tags: [String]? = nil, publishAt: Date?? = nil
+  ) {
+    self.title = title
+    self.slug = slug
+    self.excerpt = excerpt
+    self.metaTitle = metaTitle
+    self.metaDescription = metaDescription
+    self.bodyMarkdown = bodyMarkdown
+    self.tags = tags
+    self.publishAt = publishAt
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case title, slug, excerpt, metaTitle, metaDescription, bodyMarkdown, tags, publishAt
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(title, forKey: .title)
+    try container.encodeIfPresent(slug, forKey: .slug)
+    if let excerpt { try container.encode(excerpt, forKey: .excerpt) }
+    if let metaTitle { try container.encode(metaTitle, forKey: .metaTitle) }
+    if let metaDescription { try container.encode(metaDescription, forKey: .metaDescription) }
+    try container.encodeIfPresent(bodyMarkdown, forKey: .bodyMarkdown)
+    try container.encodeIfPresent(tags, forKey: .tags)
+    if let publishAt { try container.encode(publishAt, forKey: .publishAt) }
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    title = try container.decodeIfPresent(String.self, forKey: .title)
+    slug = try container.decodeIfPresent(String.self, forKey: .slug)
+    excerpt = try container.decodeIfPresent(String?.self, forKey: .excerpt)
+    metaTitle = try container.decodeIfPresent(String?.self, forKey: .metaTitle)
+    metaDescription = try container.decodeIfPresent(String?.self, forKey: .metaDescription)
+    bodyMarkdown = try container.decodeIfPresent(String.self, forKey: .bodyMarkdown)
+    tags = try container.decodeIfPresent([String].self, forKey: .tags)
+    publishAt = try container.decodeIfPresent(Date?.self, forKey: .publishAt)
+  }
+}
+
+/// The `data` of an `article.published` webhook: the whole article, ready to
+/// store. Image URLs are fetchable for six hours; download your own copy.
+public struct BlogArticleWebhookPayload: Codable, Sendable, Hashable {
+  public let id: String
+  public let title: String
+  public let slug: String
+  public let excerpt: String?
+  public let metaTitle: String?
+  public let metaDescription: String?
+  public let bodyMarkdown: String?
+  public let bodyHtml: String?
+  public let featuredImage: BlogArticleImage?
+  public let images: [BlogArticleImage]?
+  public let tags: [String]?
+  public let keyword: String?
+  public let wordCount: Int?
+  public let publishedAt: Date?
+  /// Where the article went live, when the target reported it.
+  public let publishedUrl: String?
+}
