@@ -75,6 +75,9 @@ public final class FoPostClient: Sendable {
   /// Labels, the campaign tags posts are grouped by.
   public var labels: LabelsResource { LabelsResource(transport: transport) }
 
+  /// Articles and products on a connected site, by the platform's own ids.
+  public var blogs: BlogsResource { BlogsResource(transport: transport) }
+
   /// What happened in a workspace, and the security audit log.
   public var activity: ActivityResource { ActivityResource(transport: transport) }
   /// Outbound webhooks, the push counterpart to polling a post's deliveries.
