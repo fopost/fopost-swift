@@ -114,6 +114,8 @@ public final class FoPostClient: Sendable {
   public var googleBusiness: GoogleBusinessResource {
     GoogleBusinessResource(transport: transport)
   }
+  /// WhatsApp Business: templates, flows, groups, blocking and commerce.
+  public var whatsapp: WhatsappResource { WhatsappResource(transport: transport) }
 
   // MARK: - Escape hatch
 

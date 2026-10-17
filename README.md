@@ -188,6 +188,7 @@ let post = try await client.posts.create(
 | `client.validate` | Check a post, text length, or a media URL against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
 | `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
+| `client.whatsapp` | Templates, flows, groups, blocking, commerce and the profile on a WhatsApp Business number |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
