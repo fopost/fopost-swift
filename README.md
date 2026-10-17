@@ -257,7 +257,9 @@ _ = try await client.sequences.unenroll(sequence.id, [contactID])
 
 An article goes to a website, a post goes to a social network. `client.blog` plans keywords, writes articles from them, and publishes to the target in the settings: the product blog, a connected account, or your own website.
 
-Every call names the workspace. Reading, settings and keyword edits need the `posts` scope; `planKeywords`, `requestArticle` and `regenerateArticle` spend AI credits and need `ai` (an empty balance is `.paymentRequired` with `upgradeURL`); `publishArticle` needs `publish` and answers `.conflict` with code `no_target` until a target is set.
+Every call names the workspace. Reading, settings, keyword edits and `submitArticle` need the `posts` scope; `suggestSeeds`, `planKeywords`, `requestArticle` and `regenerateArticle` spend AI credits and need `ai` (an empty balance is `.paymentRequired` with `upgradeURL`); `publishArticle` needs `publish` and answers `.conflict` with code `no_target` until a target is set.
+
+Planning starts from the blog `goal` and topics: `suggestSeeds` proposes search terms to edit, `planKeywords` researches them into `.suggested` keywords (follow the run on `settings.planRun`), and setting a keyword to `.planned` picks it onto the next free date. A written article stops at `.draft`; `submitArticle` moves it to `.inReview`, and only then can it be published or given a `publishAt`.
 
 ```swift
 let article = try await client.blog.requestArticle(
@@ -267,6 +269,10 @@ let article = try await client.blog.requestArticle(
 // Queued, then written in the background. Poll, or subscribe to `article.published`.
 let full = try await client.blog.getArticle(workspaceID: workspaceID, article.id)
 print(full.status as Any, full.wordCount as Any)
+
+// Once it is a draft, send it for approval, then publish.
+_ = try await client.blog.submitArticle(workspaceID: workspaceID, article.id)
+_ = try await client.blog.publishArticle(workspaceID: workspaceID, article.id)
 ```
 
 The website target POSTs each published article to `websiteUrl`, signed with the secret that `updateSettings` returns once when the URL is first set (`rotateWebsiteSecret` issues a new one). Verify over the raw request bytes, never re-serialised JSON:
