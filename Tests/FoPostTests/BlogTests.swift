@@ -230,7 +230,7 @@ final class BlogTests: XCTestCase {
     XCTAssertEqual(article.outline?.count, 2)
     XCTAssertEqual(article.bodyMarkdown, "# Best time")
     XCTAssertEqual(article.images?.first?.position, 1)
-    XCTAssertEqual(article.brief, .object(["sources": .number(3)]))
+    XCTAssertEqual(article.brief, .object(["sources": .int(3)]))
   }
 
   func testUpdateArticleSplitsClearFromUnset() async throws {
