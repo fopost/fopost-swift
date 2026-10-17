@@ -143,6 +143,18 @@ public struct InboxResource: Resource {
       body: InboxTypingRequest(accountID: accountID, on: on), as: InboxTypingResult.self)
   }
 
+  /// Passes a Messenger thread to another Meta app, or takes it back when
+  /// `appID` is nil. Also needs the `publish` scope.
+  @discardableResult
+  public func handover(
+    conversationID: String, accountID: String, appID: String? = nil, metadata: String? = nil
+  ) async throws -> InboxHandover {
+    try await httpPost(
+      "/inbox/conversations/\(escapePath(conversationID))/handover",
+      body: InboxHandoverRequest(accountID: accountID, appID: appID, metadata: metadata),
+      as: InboxHandover.self)
+  }
+
   /// Deletes a comment on the platform, or our own reply. Deleting our own
   /// reply also needs the `publish` scope.
   @discardableResult

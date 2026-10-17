@@ -50,9 +50,91 @@ public struct PostsResource: Resource {
     try await httpPost("/posts", body: body, as: Post.self)
   }
 
+  /// Composes a post and attaches `files` to its first content block. Files
+  /// within the multipart ceiling travel with the post in one request; bigger
+  /// ones go through a direct upload first and are attached by URL.
+  public func create(_ body: CreatePostRequest, files: [UploadFile]) async throws -> Post {
+    guard !files.isEmpty else { return try await create(body) }
+    if try await fitsMultipart(files) {
+      return try await httpUpload(
+        "/posts", form: try postForm(body, files: files), as: Post.self)
+    }
+    var body = body
+    body.content = try await attachDirect(
+      files, workspaceID: body.workspaceID, to: body.content)
+    return try await create(body)
+  }
+
   /// Edits a post that has not been published.
   public func update(_ id: String, _ body: UpdatePostRequest) async throws -> Post {
     try await httpPut("/posts/\(escapePath(id))", body: body, as: Post.self)
+  }
+
+  /// Edits a post and attaches `files` to its first content block, the same
+  /// way ``create(_:files:)`` does. When `body.content` is nil the post's
+  /// current content is kept and the files are appended to it.
+  public func update(_ id: String, _ body: UpdatePostRequest, files: [UploadFile]) async throws
+    -> Post
+  {
+    guard !files.isEmpty else { return try await update(id, body) }
+    if try await fitsMultipart(files) {
+      return try await httpUpload(
+        "/posts/\(escapePath(id))", method: "PUT", form: try postForm(body, files: files),
+        as: Post.self)
+    }
+    let existing = try await get(id)
+    guard let workspaceID = existing.workspaceID else {
+      throw FoPostError.decoding(
+        message: "The post did not report its workspace.", body: Data())
+    }
+    var body = body
+    body.content = try await attachDirect(
+      files, workspaceID: workspaceID, to: body.content ?? existing.content ?? [])
+    return try await update(id, body)
+  }
+
+  private func fitsMultipart(_ files: [UploadFile]) async throws -> Bool {
+    let ceiling =
+      (try? await MediaResource(transport: transport).limits().multipartMaxFileBytes)
+      ?? MediaResource.fallbackMultipartMaxFileBytes
+    for file in files where try file.size() > ceiling { return false }
+    return true
+  }
+
+  private func postForm(_ body: some Encodable & Sendable, files: [UploadFile]) throws
+    -> MultipartForm
+  {
+    let json: Data
+    do {
+      json = try Coding.encoder.encode(body)
+    } catch {
+      throw FoPostError.encoding(message: "Could not encode the request body: \(error)")
+    }
+    var form = MultipartForm()
+    form.addField("post", String(decoding: json, as: UTF8.self))
+    for file in files {
+      form.addFile(
+        field: "files", filename: file.name, mimeType: file.mimeType, data: try file.bytes())
+    }
+    return form
+  }
+
+  private func attachDirect(
+    _ files: [UploadFile], workspaceID: String, to content: [ContentBlock]
+  ) async throws -> [ContentBlock] {
+    let media = MediaResource(transport: transport)
+    var items: [MediaItem] = []
+    for file in files {
+      let uploaded = try await media.uploadDirect(workspaceID: workspaceID, file: file)
+      items.append(
+        MediaItem(
+          type: file.mediaType, name: uploaded.name ?? file.name, url: uploaded.url,
+          size: Double(try uploaded.size ?? file.size())))
+    }
+    var blocks = content
+    if blocks.isEmpty { blocks = [ContentBlock(text: "")] }
+    blocks[0].media = (blocks[0].media ?? []) + items
+    return blocks
   }
 
   /// Removes a post.

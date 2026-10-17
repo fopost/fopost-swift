@@ -293,3 +293,214 @@ public struct CollectSummary: Codable, Sendable, Hashable {
   public let errors: Int?
   public let errorDetails: [ErrorDetail]?
 }
+
+// MARK: - Deeper analytics
+
+/// One age band of the content decay report.
+public struct DecayBand: Codable, Sendable, Hashable {
+  public let bucket: String?
+  public let label: String?
+  /// Posts with at least one reading in this band.
+  public let posts: Int?
+  public let avgEngagements: Double?
+  public let avgImpressions: Double?
+  /// Mean share of the post's final engagement reached by this age, 0-1.
+  /// `nil` when nothing in the band had earned anything yet.
+  public let shareOfFinal: Double?
+}
+
+/// How engagement accumulates as a post ages.
+public struct ContentDecay: Codable, Sendable, Hashable {
+  public let days: Int?
+  /// Posts with a publish time and at least one later reading.
+  public let postsMeasured: Int?
+  /// First band where the average post had passed half its final engagement.
+  public let halfLifeBucket: String?
+  public let bands: [DecayBand]?
+}
+
+/// One week of posting. `weekStart` is the Monday, UTC, as `YYYY-MM-DD`.
+public struct FrequencyWeek: Codable, Sendable, Hashable {
+  public let weekStart: String?
+  public let posts: Int?
+  public let engagements: Int?
+  public let avgEngagementsPerPost: Double?
+}
+
+/// The weeks that shared a cadence, folded together.
+public struct FrequencyBand: Codable, Sendable, Hashable {
+  public let band: String?
+  public let label: String?
+  public let weeks: Int?
+  public let posts: Int?
+  public let avgPostsPerWeek: Double?
+  public let avgEngagementsPerPost: Double?
+  /// Engagements over reach, impressions as the stand-in; `nil` with neither.
+  public let engagementRate: Double?
+}
+
+/// Weekly cadence set against what each cadence earned per post.
+public struct PostingFrequency: Codable, Sendable, Hashable {
+  public let days: Int?
+  public let weeks: [FrequencyWeek]?
+  public let bands: [FrequencyBand]?
+  /// The cadence that earned the most per post; `nil` without posts.
+  public let best: FrequencyBand?
+}
+
+/// What moved between one reading and the one before it.
+public struct TimelineDelta: Codable, Sendable, Hashable {
+  public let impressions: Int?
+  public let reach: Int?
+  public let engagements: Int?
+  public let likes: Int?
+  public let comments: Int?
+  public let shares: Int?
+}
+
+/// One reading of a post.
+public struct TimelinePoint: Codable, Sendable, Hashable {
+  public let at: String?
+  /// Minutes since publication; `nil` when the network never said when.
+  public let ageMinutes: Int?
+  public let impressions: Int?
+  public let reach: Int?
+  public let engagements: Int?
+  public let likes: Int?
+  public let comments: Int?
+  public let shares: Int?
+  public let videoViews: Int?
+  public let delta: TimelineDelta?
+}
+
+/// One delivery's readings: the same post on two networks decays differently.
+public struct TimelineDelivery: Codable, Sendable, Hashable {
+  public let accountId: String?
+  public let platform: Platform?
+  public let username: String?
+  public let externalPostId: String?
+  public let postedAt: String?
+  public let points: [TimelinePoint]?
+}
+
+/// Every reading held for one post, one timeline per delivery.
+public struct PostTimeline: Codable, Sendable, Hashable {
+  /// `nil` when the post was made natively on the network.
+  public let postId: String?
+  public let deliveries: [TimelineDelivery]?
+}
+
+/// One reading, as the changes feed reports it.
+public struct MetricChange: Codable, Sendable, Hashable {
+  public let accountId: String?
+  public let platform: Platform?
+  public let externalPostId: String?
+  /// `nil` for a post made natively on the network.
+  public let postId: String?
+  public let postedAt: String?
+  public let fetchedAt: String?
+  public let impressions: Int?
+  public let reach: Int?
+  public let engagements: Int?
+  public let likes: Int?
+  public let comments: Int?
+  public let shares: Int?
+}
+
+/// One page of readings. Feed `cursor` back as the next `since`.
+public struct MetricChangePage: Codable, Sendable, Hashable {
+  public let since: String?
+  /// `nil` when nothing changed.
+  public let cursor: String?
+  public let hasMore: Bool?
+  public let changes: [MetricChange]?
+}
+
+/// What the on-demand refresh did for one delivery.
+public struct CollectPostDelivery: Codable, Sendable, Hashable {
+  public let accountId: String?
+  public let platform: Platform?
+  public let externalPostId: String?
+  public let collected: Bool?
+  public let fetchedAt: String?
+  /// Why the refresh did not happen.
+  public let message: String?
+}
+
+/// What one post's refresh managed.
+public struct CollectPostResult: Codable, Sendable, Hashable {
+  public let collected: Int?
+  public let deliveries: [CollectPostDelivery]?
+}
+
+/// The freshest reading held for a post made outside FoPost.
+public struct NativePostMetrics: Codable, Sendable, Hashable {
+  public let impressions: Int?
+  public let reach: Int?
+  public let engagements: Int?
+  public let likes: Int?
+  public let comments: Int?
+  public let shares: Int?
+  public let videoViews: Int?
+}
+
+/// A post on the account that never went out through FoPost.
+public struct NativePost: Codable, Sendable, Hashable {
+  public let externalPostId: String?
+  public let text: String?
+  public let permalink: String?
+  public let thumbnailUrl: String?
+  public let mediaType: String?
+  public let postedAt: String?
+  public let fetchedAt: String?
+  public let metrics: NativePostMetrics?
+}
+
+/// Filters for the changes feed. `since` is an ISO 8601 timestamp; leaving it
+/// unset asks for the last seven days.
+public struct MetricChangesParams: Sendable {
+  public var since: String?
+  public var limit: Int?
+  public var workspaceID: String?
+  public var accountID: String?
+
+  public init(
+    since: String? = nil, limit: Int? = nil, workspaceID: String? = nil, accountID: String? = nil
+  ) {
+    self.since = since
+    self.limit = limit
+    self.workspaceID = workspaceID
+    self.accountID = accountID
+  }
+
+  var query: Query {
+    var query = Query()
+    query.add("since", since)
+    query.add("limit", limit)
+    query.add("workspace_id", workspaceID)
+    query.add("accountId", accountID)
+    return query
+  }
+}
+
+/// Pagination for the posts made outside FoPost.
+public struct NativePostsParams: Sendable {
+  public var page: Int?
+  public var perPage: Int?
+  /// Keep only posts published in the last this many days.
+  public var days: Int?
+
+  public init(page: Int? = nil, perPage: Int? = nil, days: Int? = nil) {
+    self.page = page
+    self.perPage = perPage
+    self.days = days
+  }
+
+  var query: Query {
+    var query = Query()
+    query.add("page", page)
+    query.add("per_page", perPage)
+    query.add("days", days)
+    return query
+  }
+}
