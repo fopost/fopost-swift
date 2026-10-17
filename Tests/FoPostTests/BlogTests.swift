@@ -6,18 +6,21 @@ import XCTest
 final class BlogTests: XCTestCase {
   private static let settings = """
     {"siteUrl":"https://yourbrand.com","topic":"Scheduling tools","audience":null,
+     "goal":"signups","focusTopics":"scheduling, analytics","avoidTopics":"politics",
      "language":"en","locationCode":2840,"cadencePerWeek":2,"reviewHoldDays":3,
-     "autoPublish":false,"imageTier":"standard","inBodyImages":2,"minWords":900,
+     "imageTier":"standard","inBodyImages":2,"minWords":900,
      "maxWords":1600,"brandVoiceId":"bv_1","targetKind":"website","targetAccountId":null,
      "targetPlatform":null,"websiteUrl":"https://yourbrand.com/hooks/fopost",
      "hasWebsiteSecret":true,"keywordDataAvailable":true,
+     "planRun":{"status":"done","error":null,"added":12,"finishedAt":"2026-10-01T09:05:00.000Z"},
      "updatedAt":"2026-10-01T09:00:00.000Z"}
     """
 
   private static let keyword = """
     {"id":"kw_1","keyword":"best time to post","searchVolume":2400,"difficulty":31,
      "cpc":1.2,"intent":"informational","source":"provider","status":"planned",
-     "plannedFor":"2026-10-14","createdAt":"2026-10-01T09:00:00.000Z"}
+     "plannedFor":"2026-10-14","fitReason":"Buyers ask it before choosing a tool",
+     "createdAt":"2026-10-01T09:00:00.000Z"}
     """
 
   private static let article = """
@@ -44,6 +47,10 @@ final class BlogTests: XCTestCase {
     XCTAssertEqual(settings.targetKind, .website)
     XCTAssertEqual(settings.brandVoiceID, "bv_1")
     XCTAssertEqual(settings.hasWebsiteSecret, true)
+    XCTAssertEqual(settings.goal, .signups)
+    XCTAssertEqual(settings.avoidTopics, "politics")
+    XCTAssertEqual(settings.planRun?.status, .done)
+    XCTAssertEqual(settings.planRun?.added, 12)
   }
 
   func testUpdateSettingsSendsTheWorkspaceInTheBodyAndKeepsTheSecret() async throws {
@@ -55,6 +62,7 @@ final class BlogTests: XCTestCase {
     let updated = try await client.blog.updateSettings(
       workspaceID: "ws_1",
       UpdateBlogSettingsRequest(
+        goal: .leads, focusTopics: "scheduling", avoidTopics: .some(nil),
         cadencePerWeek: 2, brandVoiceID: .some(nil), targetKind: .website,
         websiteUrl: "https://yourbrand.com/hooks/fopost"))
 
@@ -68,6 +76,9 @@ final class BlogTests: XCTestCase {
     XCTAssertEqual(body["targetKind"] as? String, "website")
     // Inner nil clears; an unset field is left out entirely.
     XCTAssertTrue(body["brandVoiceId"] is NSNull, request.bodyString)
+    XCTAssertEqual(body["goal"] as? String, "leads")
+    XCTAssertEqual(body["focusTopics"] as? String, "scheduling")
+    XCTAssertTrue(body["avoidTopics"] is NSNull, request.bodyString)
     XCTAssertNil(body["topic"], request.bodyString)
     XCTAssertEqual(updated.websiteSecret, "whsec_abc")
     XCTAssertEqual(updated.data.websiteUrl, "https://yourbrand.com/hooks/fopost")
@@ -109,6 +120,39 @@ final class BlogTests: XCTestCase {
     XCTAssertEqual(keywords[0].status, .planned)
     XCTAssertEqual(keywords[0].plannedFor, "2026-10-14")
     XCTAssertEqual(keywords[0].difficulty, 31)
+    XCTAssertEqual(keywords[0].fitReason, "Buyers ask it before choosing a tool")
+  }
+
+  func testSuggestSeedsPostsSeedsAndPromptAndASpentBalanceIsPaymentRequired() async throws {
+    StubURLProtocol.script([
+      .json(#"{"data":{"seeds":["social media calendar","post scheduler"]}}"#),
+      .json(
+        #"{"error":"insufficient_credits","message":"Balance is empty","upgrade_url":"https://fopost.com/billing"}"#,
+        status: 402),
+    ])
+    let client = try makeStubClient()
+
+    let suggested = try await client.blog.suggestSeeds(
+      workspaceID: "ws_1", seeds: ["scheduling"], prompt: "Lean into small agencies")
+    XCTAssertEqual(suggested.seeds, ["social media calendar", "post scheduler"])
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/blog/keywords/suggest")
+    let body = try request.bodyJSON()
+    XCTAssertEqual(body["workspaceId"] as? String, "ws_1")
+    XCTAssertEqual(body["seeds"] as? [String], ["scheduling"])
+    XCTAssertEqual(body["prompt"] as? String, "Lean into small agencies")
+
+    do {
+      _ = try await client.blog.suggestSeeds(workspaceID: "ws_1")
+      XCTFail("expected a 402")
+    } catch let error as FoPostError {
+      guard case .paymentRequired = error else { return XCTFail("\(error)") }
+      XCTAssertEqual(error.code, "insufficient_credits")
+    }
+    let bare = try StubURLProtocol.requests[1].bodyJSON()
+    XCTAssertNil(bare["seeds"])
+    XCTAssertNil(bare["prompt"])
   }
 
   func testPlanKeywordsIsQueuedAndASpentBalanceIsPaymentRequired() async throws {
@@ -284,6 +328,36 @@ final class BlogTests: XCTestCase {
     XCTAssertEqual(requests.map(\.method), ["POST", "POST", "POST", "DELETE"])
     for request in requests {
       XCTAssertEqual(request.query["workspaceId"], "ws_1", request.path)
+    }
+  }
+
+  func testSubmitArticlePostsToTheSubmitPathAndReadsInReview() async throws {
+    let inReview = Self.article.replacingOccurrences(
+      of: #""status":"queued""#, with: #""status":"in_review""#)
+    StubURLProtocol.script([.json("{\"data\":\(inReview)}")])
+    let client = try makeStubClient()
+
+    let article = try await client.blog.submitArticle(workspaceID: "ws_1", "art_1")
+
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/blog/articles/art_1/submit")
+    XCTAssertEqual(request.query["workspaceId"], "ws_1")
+    XCTAssertEqual(article.status, .inReview)
+  }
+
+  func testSubmitFromAStateThatCannotBeSubmittedIsAConflict() async throws {
+    StubURLProtocol.script([
+      .json(#"{"error":"invalid_state","message":"Only a draft can be submitted"}"#, status: 409)
+    ])
+    let client = try makeStubClient()
+
+    do {
+      _ = try await client.blog.submitArticle(workspaceID: "ws_1", "art_1")
+      XCTFail("expected a 409")
+    } catch let error as FoPostError {
+      guard case .conflict = error else { return XCTFail("\(error)") }
+      XCTAssertEqual(error.code, "invalid_state")
     }
   }
 

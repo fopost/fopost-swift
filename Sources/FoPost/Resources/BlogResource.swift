@@ -5,7 +5,8 @@ import Foundation
 ///
 /// An article goes to a website; a post goes to a social network. Every call
 /// is scoped to one workspace. Reading, settings and keyword edits need the
-/// `posts` scope; ``planKeywords(workspaceID:seeds:)``,
+/// `posts` scope; ``suggestSeeds(workspaceID:seeds:prompt:)``,
+/// ``planKeywords(workspaceID:seeds:)``,
 /// ``requestArticle(workspaceID:_:)`` and ``regenerateArticle(workspaceID:_:)``
 /// spend AI credits and need `ai`; ``publishArticle(workspaceID:_:)`` needs
 /// `publish`.
@@ -60,8 +61,24 @@ public struct BlogResource: Resource {
     return try await httpGet("/blog/keywords", query: query, as: [BlogKeyword].self)
   }
 
-  /// Queues keyword research from the workspace's topic, or from `seeds`.
-  /// Spends AI credits and needs the `ai` scope.
+  /// Suggests about 10 search terms from the blog goal and topics, to edit
+  /// before research. Pass the current `seeds` to refine them and `prompt` to
+  /// steer. Spends AI credits and needs the `ai` scope; an empty balance is
+  /// `.paymentRequired`.
+  public func suggestSeeds(
+    workspaceID: String, seeds: [String]? = nil, prompt: String? = nil
+  ) async throws -> BlogSeedSuggestions {
+    try await httpPost(
+      "/blog/keywords/suggest",
+      body: SuggestBlogSeedsRequest(workspaceId: workspaceID, seeds: seeds, prompt: prompt),
+      as: BlogSeedSuggestions.self)
+  }
+
+  /// Queues keyword research from the blog settings, or from `seeds`. Results
+  /// land as ``BlogKeywordStatus/suggested`` and do not fill the calendar;
+  /// follow the run on ``BlogSettings/planRun`` and set a keyword to
+  /// ``BlogKeywordStatus/planned`` to pick it. Spends AI credits and needs the
+  /// `ai` scope.
   @discardableResult
   public func planKeywords(workspaceID: String, seeds: [String]? = nil) async throws -> BlogQueued {
     try await httpPost(
@@ -77,7 +94,8 @@ public struct BlogResource: Resource {
       "/blog/keywords", body: WorkspaceScoped(workspaceID, body), as: BlogKeyword.self)
   }
 
-  /// Changes a keyword's status or planned day.
+  /// Changes a keyword's status or planned day. Setting the status to
+  /// ``BlogKeywordStatus/planned`` picks it, and it takes the next free date.
   public func updateKeyword(
     workspaceID: String, _ id: String, _ body: UpdateBlogKeywordRequest
   ) async throws -> BlogKeyword {
@@ -120,7 +138,8 @@ public struct BlogResource: Resource {
       "/blog/articles/\(escapePath(id))", query: workspace(workspaceID), as: BlogArticleFull.self)
   }
 
-  /// Edits a draft or scheduled article. Anything else answers `409`.
+  /// Edits a draft or scheduled article. Anything else answers `409`. Setting
+  /// `publishAt` needs the article in review (or already scheduled or failed).
   public func updateArticle(
     workspaceID: String, _ id: String, _ body: UpdateBlogArticleRequest
   ) async throws -> BlogArticleFull {
@@ -137,8 +156,18 @@ public struct BlogResource: Resource {
       as: BlogArticle.self)
   }
 
-  /// Publishes the article to the configured target. Answers `409 no_target`
-  /// when the workspace has none. Needs the `publish` scope.
+  /// Moves a draft, failed or rejected article to ``BlogArticleStatus/inReview``.
+  /// Any other state answers `409`.
+  public func submitArticle(workspaceID: String, _ id: String) async throws -> BlogArticle {
+    try await httpPost(
+      "/blog/articles/\(escapePath(id))/submit", query: workspace(workspaceID),
+      as: BlogArticle.self)
+  }
+
+  /// Publishes the article to the configured target. The article must be in
+  /// review (or already scheduled or failed); a draft answers `409` until it is
+  /// submitted, and `409 no_target` means the workspace has no target. Needs the
+  /// `publish` scope.
   public func publishArticle(workspaceID: String, _ id: String) async throws -> BlogArticle {
     try await httpPost(
       "/blog/articles/\(escapePath(id))/publish", query: workspace(workspaceID),
