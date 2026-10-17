@@ -87,12 +87,60 @@ let content = [ContentBlock(text: "Numbers are in", media: [uploaded.asMediaItem
 A direct upload sends the bytes to storage instead of through the API:
 `uploadDirect` presigns, PUTs the file, and completes it in one call, and
 `presign` plus `complete(uploadID:)` are there when you want to PUT the bytes
-yourself.
+yourself. Pass a file URL and the file is streamed off disk, so a
+multi-gigabyte video never sits in memory.
 
 ```swift
 let uploaded = try await client.media.uploadDirect(
-    workspaceID: workspace.id, filename: "chart.png", mimeType: "image/png",
-    data: try Data(contentsOf: URL(fileURLWithPath: "chart.png")))
+    workspaceID: workspace.id, fileURL: URL(fileURLWithPath: "launch.mp4"))
+```
+
+`PresignOptions` places the asset as it lands: a `folderID`, a `brandRole`
+(`logo`, `product`, `person`, `background`) with its `brandVoiceID`, and the
+`personConsent` a `person` asset requires.
+
+### Files on posts
+
+`create(_:files:)` and `update(_:_:files:)` take up to five files and attach
+them to the post's first content block. The SDK picks the route: files within
+the multipart ceiling travel with the post in one request, anything bigger goes
+through a direct upload first and is attached by URL. Either way you get the
+post back.
+
+```swift
+let post = try await client.posts.create(
+    CreatePostRequest(
+        workspaceID: workspace.id,
+        accounts: accounts.map(\.id),
+        content: .text("Launch day")),
+    files: [
+        UploadFile(contentsOf: URL(fileURLWithPath: "launch.mp4")),
+        UploadFile(name: "cover.png", data: coverBytes),
+    ])
+```
+
+On an update with no `content`, the post's current blocks are kept and the
+files are appended to the first one.
+
+### Upload limits
+
+`client.media.limits(workspaceID:)` reports what the account may upload:
+`maxFileBytes` is the largest file by any route (it grows with connected
+accounts, or with the Large Uploads add-on), `multipartMaxFileBytes` is the most
+one file may carry in a multipart request, and `nextTier` says what more
+accounts would unlock. An oversize file answers with a 413 `file_too_large`;
+`error.maxFileBytes` and `error.upgradeURL` carry the ceiling and where to
+raise it.
+
+```swift
+let limits = try await client.media.limits(workspaceID: workspace.id)
+print(limits.maxFileBytes, limits.multipartMaxFileBytes)
+
+do {
+    try await client.posts.create(request, files: [bigVideo])
+} catch let error as FoPostError where error.status == 413 {
+    print("Files up to \(error.maxFileBytes ?? 0) bytes", error.upgradeURL ?? "")
+}
 ```
 
 ## Scheduling and publishing
@@ -120,19 +168,27 @@ let post = try await client.posts.create(
 
 | Namespace | Covers |
 | --- | --- |
-| `client.posts` | List, create, update, publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
+| `client.posts` | List, create, update (both with files attached), publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
-| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Reddit subreddits, rules, flairs and the default subreddit |
+| `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription, per-network metrics, Reddit subreddits, rules, flairs and the default subreddit |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
 | `client.webhooks` | Outbound event subscriptions |
-| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection |
+| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost |
 | `client.automations` | Automations, runs, stats, manual triggers |
-| `client.media` | The media library, uploads, and direct (presigned) uploads |
+| `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
-| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, audiences, targeting search, reach estimates, insights, lead forms, leads and the stored leads feed |
+| `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
+| `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
+| `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
+| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
+| `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
+| `client.blog` | Blog articles for a website: settings and the website signing secret, the keyword plan, and articles from request through publish |
 | `client.validate` | Check a post, text length, a media URL, or a subreddit against platform rules without creating anything |
+| `client.activity` | What happened in a workspace, and the security audit log |
+| `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
+| `client.whatsapp` | Templates, flows, groups, blocking, commerce and the profile on a WhatsApp Business number |
 
 Lists that paginate return a `Page<T>` carrying `data` and `meta`
 (`currentPage`, `perPage`, `total`, `lastPage`, `from`, `to`). `client.posts.all(_:)`
@@ -145,14 +201,92 @@ for try await post in client.posts.all(PostListParams(status: .published)) {
 ```
 
 Inbox lists return an `InboxPage<T>` instead, whose `meta` is `page`, `perPage`,
-and `total`.
+and `total`. `client.activity.list(_:)` returns an `ActivityPage` whose `meta`
+is a single `nextCursor`; `kind: .security` is the audit log, whose rows are
+append-only and never expire.
+
+```swift
+let page = try await client.activity.list(
+    ActivityListParams(workspaceID: workspaceID, kind: .security))
+for event in page.data {
+    print("\(event.actor.name ?? "System"): \(event.summary)")
+}
+```
+
+## Broadcasts and sequences
+
+A broadcast is one message into every conversation you already have with a segment of your contacts; a sequence is a series of them on a delay. Neither opens a cold DM.
+
+Nothing is sent into a closed messaging window: Messenger and Instagram take a business-initiated message only within 24 hours of the contact's last one, so recipients outside it come back skipped with `.windowClosed` rather than attempted. Telegram, Slack, Bluesky and Reddit have no window. The number sent is therefore often lower than the audience, and that is correct rather than a failure.
+
+```swift
+let broadcast = try await client.broadcasts.create(
+  CreateBroadcastRequest(
+    workspaceID: workspaceID,
+    accountID: accountID,
+    name: "September check-in",
+    text: "New colours just landed. Want a look?",
+    audience: AudienceFilter(platforms: ["instagram"])))
+
+// `recipients` is how many contacts matched, not how many will be messaged.
+let sent = try await client.broadcasts.send(broadcast.id)
+print(sent.recipients)
+
+// Who was skipped, and why.
+let skipped = try await client.broadcasts.recipients(broadcast.id, status: "skipped")
+for recipient in skipped.data {
+  print("\(recipient.displayName ?? "") — \(recipient.skipReason?.rawValue ?? "")")
+}
+
+let sequence = try await client.sequences.create(
+  CreateSequenceRequest(
+    workspaceID: workspaceID, accountID: accountID, name: "Welcome",
+    steps: [
+      SequenceStep(delayHours: 0, text: "Thanks for the follow — anything I can help with?"),
+      SequenceStep(delayHours: 48, text: "Here is what people usually ask us first."),
+    ]))
+
+// By id, or by the same audience filter a broadcast takes.
+_ = try await client.sequences.enroll(sequence.id, EnrollRequest(contactIDs: [contactID]))
+
+// Nothing further fires for them.
+_ = try await client.sequences.unenroll(sequence.id, [contactID])
+```
+
+## Blog
+
+An article goes to a website, a post goes to a social network. `client.blog` plans keywords, writes articles from them, and publishes to the target in the settings: the product blog, a connected account, or your own website.
+
+Every call names the workspace. Reading, settings and keyword edits need the `posts` scope; `planKeywords`, `requestArticle` and `regenerateArticle` spend AI credits and need `ai` (an empty balance is `.paymentRequired` with `upgradeURL`); `publishArticle` needs `publish` and answers `.conflict` with code `no_target` until a target is set.
+
+```swift
+let article = try await client.blog.requestArticle(
+  workspaceID: workspaceID,
+  RequestBlogArticleRequest(keyword: "best time to post", instructions: "Lead with the data."))
+
+// Queued, then written in the background. Poll, or subscribe to `article.published`.
+let full = try await client.blog.getArticle(workspaceID: workspaceID, article.id)
+print(full.status as Any, full.wordCount as Any)
+```
+
+The website target POSTs each published article to `websiteUrl`, signed with the secret that `updateSettings` returns once when the URL is first set (`rotateWebsiteSecret` issues a new one). Verify over the raw request bytes, never re-serialised JSON:
+
+```swift
+let envelope = try FoPostWebhook.verify(rawBody: rawBody, headers: headers, secret: secret)
+if envelope.event == .articlePublished {
+  let article: BlogArticleWebhookPayload = try envelope.decodeData()
+  // Image URLs are fetchable for six hours; store your own copy.
+}
+```
+
+`FoPostWebhook.verify` prefers the timestamped `X-FoPost-Signature-256` header and refuses a timestamp more than five minutes away; it falls back to the plain `X-FoPost-Signature` only when no timestamp was sent. It throws `WebhookVerificationError` and works for every FoPost webhook, not just the blog.
 
 ## Inbox and ads
 
-Every inbox call needs an API key with the `inbox` scope, every ads call the
+Every inbox, knowledge, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
 `editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
-`setTyping`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
+`setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
 reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
 duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
@@ -174,6 +308,65 @@ let ad = try await client.ads.boost(
 _ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
 ```
 
+## Contacts
+
+The people behind the inbox: one person however many handles they write from. An inbound item files its author, a reply files whoever you answered, and both fold into whatever is already on file.
+
+```swift
+let page = try await client.contacts.list(workspaceID: workspaceID, search: "ada")
+for contact in page.data {
+  print("\(contact.displayName ?? "") — \(contact.channels.count) handles")
+}
+
+// Folds into whoever already holds the first channel, so this cannot duplicate someone.
+let contact = try await client.contacts.create(
+  CreateContactRequest(
+    workspaceID: workspaceID,
+    channels: [ContactChannel(platform: "x", handle: "ada_writes")],
+    displayName: "Ada Okafor",
+    fields: ["plan_tier": "Pro"]))
+
+// A field set to nil is cleared; everything left out is untouched.
+_ = try await client.contacts.update(contact.id, UpdateContactRequest(fields: ["region": nil]))
+try await client.contacts.delete(contact.id)   // the messages stay in the inbox
+
+// The threads this person appears in, newest first.
+for thread in try await client.contacts.conversations(contact.id) {
+  print("\(thread.platform) \(thread.messages) messages")
+}
+
+// platform and handle are required columns; any other column is a custom field key.
+let result = try await client.contacts.importCSV(
+  workspaceID: workspaceID, csv: "platform,handle\nx,ada_writes")
+print("\(result.created) created, \(result.merged) merged")
+
+// The columns your workspace keeps.
+let field = try await client.contacts.createField(
+  CreateContactFieldRequest(
+    workspaceID: workspaceID, key: "plan_tier", name: "Plan Tier", type: .select,
+    options: ["Free", "Pro"]))
+try await client.contacts.deleteField(field.id)   // removes every answer to it
+
+// Volume and median reply time per thread. Needs the `analytics` scope.
+let report = try await client.contacts.conversationAnalytics(days: 30, sort: "slowest")
+```
+
+## Google Business Profile
+
+```swift
+let location = try await client.googleBusiness.location(accountID)
+try await client.googleBusiness.updateLocation(
+  accountID, fields: ["title": .string("Corner Bakery")])
+
+// Photos come from your media library, JPEG or PNG.
+try await client.googleBusiness.addMedia(accountID, mediaID: mediaID, category: "INTERIOR")
+
+let metrics = try await client.googleBusiness.performance(
+  accountID, startDate: "2026-09-01", endDate: "2026-09-30")
+```
+
+Responses relay Google's own shape as `JSONValue`. Reads need the `accounts` scope, writes `publish` as well. Every call throws a 503 `configuration_error` until Google grants the deployment Business Profile API access.
+
 ## Validation
 
 `client.validate` checks content before a post exists. Nothing is stored:
@@ -189,6 +382,43 @@ let length = try await client.validate.length(
     ValidateLengthRequest(text: "Ship day", platforms: [.twitter]))
 let media = try await client.validate.media(
     ValidateMediaRequest(url: "https://yourbrand.com/chart.png"))
+```
+
+## Analytics
+
+```swift
+// How long a post keeps earning, from the repeated readings of each post
+let decay = try await client.analytics.decay(AnalyticsParams(days: 30))
+print(decay.halfLifeBucket ?? "")  // e.g. "1h_3h"
+
+// Whether posting more earned more
+let cadence = try await client.analytics.frequency(AnalyticsParams(days: 90))
+print(cadence.best?.label ?? "")  // e.g. "3-5 a week"
+
+// Every reading held for one post, with what moved between them
+let timeline = try await client.analytics.timeline(post.id)
+
+// Mirror the metrics into your own store, without refetching everything
+var cursor: String?
+while true {
+  let page = try await client.analytics.changes(MetricChangesParams(since: cursor))
+  save(page.changes ?? [])
+  guard page.hasMore == true, let next = page.cursor else { break }
+  cursor = next
+}
+
+// Refresh one post now instead of waiting for the next collection run
+try await client.analytics.collectPost(post.id)
+
+// Posts on the account that never went out through FoPost
+let native = try await client.analytics.nativePosts(accountID: accounts[0].id)
+```
+
+A post is addressed by its FoPost id or by its permalink, so a post made by
+hand on the network works the same way:
+
+```swift
+try await client.analytics.timeline("https://x.com/acme/status/1")
 ```
 
 ## Error handling
@@ -222,7 +452,7 @@ do {
 | `.conflict` | 409 |
 | `.rateLimited` | 429 — carries `retryAfter` |
 | `.server` | 5xx |
-| `.api` | anything else |
+| `.api` | anything else, including 413 `file_too_large` — carries `maxFileBytes` and `upgradeURL` |
 | `.transport` | the request never reached the API |
 | `.decoding` / `.encoding` / `.configuration` | client-side |
 
@@ -270,6 +500,22 @@ not use the `{"data": ...}` envelope.
 FOPOST_API_KEY=fp_... swift run fopost-example
 ```
 
+## Chatbots and the inbox
+
+The [chat adapter](https://fopost.com/docs/sdks/chat-adapter) turns the FoPost inbox into one send/receive channel for a chatbot
+framework. It ships in the TypeScript and Python SDKs. There is no dedicated adapter here and no
+API change behind it, so the same loop is three pieces with this client:
+
+1. **Verify** the `inbox.message_received` webhook. The payload is ids only, on purpose, so
+   nothing a customer wrote sits in your logs. The [signing scheme](https://fopost.com/docs/webhooks/verification)
+   is HMAC-SHA256 over `{timestamp}.{body}`, refused past a five minute tolerance.
+2. **Read** the item back with `client.inbox.list(InboxListParams(…))`, filtered to the payload's
+   `accountId` and matched on its `itemId`.
+3. **Answer** with `client.inbox.reply(item.id, text: text)`, or open a thread with
+   `client.inbox.startConversation(…)`.
+
+Reading needs the `inbox` scope; answering needs `publish` as well.
+
 ## Contributing
 
 ```bash
@@ -288,3 +534,25 @@ Docs at <https://fopost.com/docs>. Questions, bugs, and feature requests go to
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+### Google Ads
+
+Campaigns, ad groups, ads, audiences, and insights are on `client.ads` and dispatch by
+connection. What only Google has is on `client.googleAds`:
+
+```swift
+let scope = GoogleAdsScope(connectionId: "c4d5e6f7-…", customerId: "1234567890")
+let keywords = try await client.googleAds.keywords(scope)
+
+try await client.googleAds.createKeyword(
+  CreateGoogleKeywordRequest(
+    scope: GoogleAdsScope(
+      workspaceId: "7d2b8c11-…", connectionId: "c4d5e6f7-…", customerId: "1234567890"),
+    adGroupId: "1234567890~adGroup~77", text: "running shoes", matchType: .exact))
+```
+
+Also `keywordIdeas`, `keywordMetrics`, `searchTerms`, `bidStrategies`, `adSchedule` and
+`setAdSchedule`, the negative keyword lists, `assets` and `assetGroups`,
+`localServicesLeads`, the conversion methods, and `query` for a raw read-only GAQL SELECT.
+Changes need the `publish` scope as well as `ads`; `customerId` has to name an account the
+connection's grant reaches.

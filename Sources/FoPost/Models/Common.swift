@@ -202,11 +202,13 @@ public struct WebhookEvent: FoPostStringEnum {
   public static let deliveryFailed: Self = "delivery.failed"
   public static let deliveryDelayed: Self = "delivery.delayed"
   public static let accountHealthChanged: Self = "account.health_changed"
+  /// A blog article went live; `data` is a ``BlogArticleWebhookPayload``.
+  public static let articlePublished: Self = "article.published"
 
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .postPublished, .postFailed, .postPartiallyFailed, .deliveryPublished, .deliveryFailed,
-    .deliveryDelayed, .accountHealthChanged,
+    .deliveryDelayed, .accountHealthChanged, .articlePublished,
   ]
 }
 
@@ -291,6 +293,7 @@ public struct Platform: FoPostStringEnum {
   public static let mastodon: Self = "mastodon"
   public static let lemmy: Self = "lemmy"
   public static let pinterest: Self = "pinterest"
+  public static let snapchat: Self = "snapchat"
   public static let telegram: Self = "telegram"
   public static let twitch: Self = "twitch"
   public static let discord: Self = "discord"
@@ -310,13 +313,14 @@ public struct Platform: FoPostStringEnum {
   public static let nostr: Self = "nostr"
   public static let whop: Self = "whop"
   public static let skool: Self = "skool"
+  public static let whatsapp: Self = "whatsapp"
 
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .twitter, .instagram, .instagramBusiness, .facebook, .linkedin, .tiktok, .youtube, .bluesky,
-    .threads, .mastodon, .lemmy, .pinterest, .telegram, .twitch, .discord, .slack, .reddit, .tumblr,
+    .threads, .mastodon, .lemmy, .pinterest, .snapchat, .telegram, .twitch, .discord, .slack, .reddit, .tumblr,
     .dribbble, .mewe, .devto, .hashnode, .medium, .substack, .googleBusiness, .kick, .listmonk,
-    .wordpress, .nostr, .whop, .skool,
+    .wordpress, .nostr, .whop, .skool, .whatsapp,
   ]
 }
 

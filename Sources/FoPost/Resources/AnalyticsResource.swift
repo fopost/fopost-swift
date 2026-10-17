@@ -59,4 +59,67 @@ public struct AnalyticsResource: Resource {
     query.add("accountId", accountID)
     return try await httpPost("/analytics/collect", query: query, as: CollectSummary.self)
   }
+
+  /// How long a post keeps earning: engagement grouped by the post's age at
+  /// each reading. `days` selects posts by publish time, not reading time.
+  public func decay(_ params: AnalyticsParams = AnalyticsParams()) async throws -> ContentDecay {
+    try await httpGet("/analytics/decay", query: params.query, as: ContentDecay.self)
+  }
+
+  /// Whether posting more earned more: weekly cadence against what each
+  /// cadence earned per post.
+  public func frequency(_ params: AnalyticsParams = AnalyticsParams()) async throws
+    -> PostingFrequency
+  {
+    try await httpGet("/analytics/frequency", query: params.query, as: PostingFrequency.self)
+  }
+
+  /// Every reading held for one post, oldest first, with what moved between
+  /// them and one timeline per delivery.
+  ///
+  /// - Parameter idOrPermalink: a FoPost post id, or the permalink of a post
+  ///   made natively on the network.
+  public func timeline(_ idOrPermalink: String) async throws -> PostTimeline {
+    let path = "/analytics/posts/\(Self.escape(idOrPermalink))/timeline"
+    return try await httpGet(path, as: PostTimeline.self)
+  }
+
+  /// Readings recorded after `since`, oldest first, with a cursor to continue.
+  /// Poll it to mirror the metrics into your own store instead of refetching
+  /// the whole history.
+  public func changes(_ params: MetricChangesParams = MetricChangesParams()) async throws
+    -> MetricChangePage
+  {
+    try await httpGet("/analytics/changes", query: params.query, as: MetricChangePage.self)
+  }
+
+  /// Re-reads one post from the network now. Spends the same per-user budget
+  /// as ``collect(accountID:)``, so a burst answers 429.
+  ///
+  /// - Parameter idOrPermalink: a FoPost post id, or the permalink of a post
+  ///   made natively on the network.
+  @discardableResult
+  public func collectPost(_ idOrPermalink: String) async throws -> CollectPostResult {
+    let path = "/posts/\(Self.escape(idOrPermalink))/analytics/collect"
+    return try await httpPost(path, as: CollectPostResult.self)
+  }
+
+  /// Posts on the account that never went out through FoPost, newest first.
+  public func nativePosts(
+    accountID: String, _ params: NativePostsParams = NativePostsParams()
+  ) async throws -> InboxPage<NativePost> {
+    try await httpGet(
+      "/accounts/\(accountID)/native-posts", query: params.query, unwrap: false,
+      as: InboxPage<NativePost>.self)
+  }
+
+  /// A post can be addressed by permalink, whose slashes would otherwise split
+  /// the path.
+  private static func escape(_ value: String) -> String {
+    // The unreserved set of RFC 3986, so an id stays readable and a permalink
+    // loses only the characters that would split the path.
+    var unreserved = CharacterSet.alphanumerics
+    unreserved.insert(charactersIn: "-._~")
+    return value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? value
+  }
 }
