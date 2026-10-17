@@ -31,11 +31,14 @@ public struct FoPostAPIErrorDetails: Sendable, Hashable {
     self.retryAfter = retryAfter
   }
 
-  /// The page a 402 suggests sending the user to, when it carries one.
+  /// The page a 402 or 413 suggests sending the user to, when it carries one.
   public var upgradeURL: URL? {
     guard let raw: String = field("upgrade_url") else { return nil }
     return URL(string: raw)
   }
+
+  /// The largest file the account allows, from a 413 `file_too_large`.
+  public var maxFileBytes: Int64? { field("max_file_bytes") }
 
   /// Decodes an extra field an error carries alongside `error` and `message`.
   public func field<T: Decodable>(_ name: String, as type: T.Type = T.self) -> T? {
@@ -99,10 +102,17 @@ public enum FoPostError: Error, Sendable {
   /// The machine-readable API error code, e.g. `subscription_required`.
   public var code: String? { details?.code }
 
-  /// Where to send the user when a 402 says the plan is the blocker.
+  /// Where to send the user when a 402 says the plan is the blocker, or a
+  /// 413 `file_too_large` says the account's upload ceiling is.
   public var upgradeURL: URL? {
-    guard case .paymentRequired(let details) = self else { return nil }
+    guard let details, details.status == 402 || details.status == 413 else { return nil }
     return details.upgradeURL
+  }
+
+  /// The largest file the account allows, when a 413 `file_too_large` said so.
+  public var maxFileBytes: Int64? {
+    guard let details, details.status == 413 else { return nil }
+    return details.maxFileBytes
   }
 
   /// The wait a 429 asked for, in seconds.

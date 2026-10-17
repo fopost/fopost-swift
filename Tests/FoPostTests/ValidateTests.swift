@@ -19,7 +19,10 @@ final class ValidateTests: XCTestCase {
     let result = try await client.validate.post(
       ValidatePostRequest(
         content: "Ship day",
-        media: [ValidateMediaItem(url: "https://yourbrand.com/chart.png", mimeType: "image/png", size: 1024)],
+        media: [
+          ValidateMediaItem(
+            url: "https://yourbrand.com/chart.png", mimeType: "image/png", size: 1024)
+        ],
         platforms: [.twitter, .linkedin]))
 
     let request = try XCTUnwrap(StubURLProtocol.requests.first)

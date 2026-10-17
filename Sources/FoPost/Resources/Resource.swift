@@ -53,12 +53,22 @@ extension Resource {
       as: Response.self)
   }
 
-  func httpUpload<Response: Decodable>(_ path: String, form: MultipartForm, as type: Response.Type)
-    async throws -> Response
-  {
+  /// A DELETE that carries a body, for routes whose scope travels in one.
+  func httpDelete<Response: Decodable>(
+    _ path: String, body: (any Encodable & Sendable)?, query: Query = Query(),
+    as type: Response.Type
+  ) async throws -> Response {
+    try await transport.send(
+      try request(method: "DELETE", path: path, body: body, query: query, unwrap: true),
+      as: Response.self)
+  }
+
+  func httpUpload<Response: Decodable>(
+    _ path: String, method: String = "POST", form: MultipartForm, as type: Response.Type
+  ) async throws -> Response {
     try await transport.send(
       HTTPRequest(
-        method: "POST", path: path, body: form.encoded(), contentType: form.contentType,
+        method: method, path: path, body: form.encoded(), contentType: form.contentType,
         unwrap: true),
       as: Response.self)
   }
