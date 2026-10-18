@@ -189,6 +189,13 @@ public struct PostsResource: Resource {
     return try await httpPost("/posts/\(escapePath(id))/cancel", body: body, as: CancelResult.self)
   }
 
+  /// Takes a published post down from every platform that supports removal
+  /// and marks it `unpublished`. Needs the `publish` scope.
+  @discardableResult
+  public func unpublish(_ id: String) async throws -> UnpublishResult {
+    try await httpPost("/posts/\(escapePath(id))/unpublish", as: UnpublishResult.self)
+  }
+
   /// Checks a post against every target platform without publishing.
   public func preflight(_ id: String) async throws -> PreflightResult {
     try await httpPost("/posts/\(escapePath(id))/preflight", as: PreflightResult.self)

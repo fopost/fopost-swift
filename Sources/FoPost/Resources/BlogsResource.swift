@@ -43,6 +43,7 @@ public struct BlogsResource: Resource {
   }
 
   /// One article in full.
+  /// Wraps the API's `getBlogArticle` operation.
   public func getArticle(accountID: String, blogID: String, articleID: String) async throws
     -> RemoteArticle
   {
@@ -57,6 +58,7 @@ public struct BlogsResource: Resource {
   }
 
   /// Changes the live article in place; never creates a duplicate.
+  /// Wraps the API's `updateBlogArticle` operation.
   public func updateArticle(
     accountID: String, blogID: String, articleID: String, _ body: ArticleRequest
   ) async throws -> RemoteArticle {
@@ -65,6 +67,7 @@ public struct BlogsResource: Resource {
   }
 
   /// Removes the article from the site. This cannot be undone.
+  /// Wraps the API's `deleteBlogArticle` operation.
   public func deleteArticle(accountID: String, blogID: String, articleID: String) async throws {
     try await httpDelete(articlePath(accountID, blogID, articleID))
   }

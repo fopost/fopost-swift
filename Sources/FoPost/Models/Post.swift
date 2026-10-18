@@ -150,6 +150,9 @@ public struct CreatePostRequest: Codable, Sendable {
   public var artifactType: String?
   public var status: PostStatus?
   public var scheduleAt: Date?
+  /// `queue` drops the post into the next free posting-queue slot instead of
+  /// a `scheduleAt` of your own.
+  public var schedule: String?
   public var repeatable: Bool?
   public var repeatableTimes: Int?
   public var repeatableGap: Int?
@@ -169,7 +172,8 @@ public struct CreatePostRequest: Codable, Sendable {
     workspaceID: String, accounts: [String] = [], accountGroupID: String? = nil,
     content: [ContentBlock],
     contentType: String? = nil, artifactType: String? = nil, status: PostStatus? = nil,
-    scheduleAt: Date? = nil, repeatable: Bool? = nil, repeatableTimes: Int? = nil,
+    scheduleAt: Date? = nil, schedule: String? = nil, repeatable: Bool? = nil,
+    repeatableTimes: Int? = nil,
     repeatableGap: Int? = nil, repeatableGapUnit: String? = nil, labels: [String]? = nil,
     title: String? = nil, internalTitle: String? = nil, summary: String? = nil,
     autoPlug: Bool? = nil, autoPlugContent: String? = nil,
@@ -184,6 +188,7 @@ public struct CreatePostRequest: Codable, Sendable {
     self.artifactType = artifactType
     self.status = status
     self.scheduleAt = scheduleAt
+    self.schedule = schedule
     self.repeatable = repeatable
     self.repeatableTimes = repeatableTimes
     self.repeatableGap = repeatableGap
@@ -200,7 +205,7 @@ public struct CreatePostRequest: Codable, Sendable {
   }
 
   enum CodingKeys: String, CodingKey {
-    case accounts, content, status, repeatable, labels, title, summary, settings
+    case accounts, content, status, schedule, repeatable, labels, title, summary, settings
     case workspaceID = "workspace_id"
     case accountGroupID = "account_group_id"
     case contentType = "content_type"
@@ -226,6 +231,8 @@ public struct UpdatePostRequest: Codable, Sendable {
   public var artifactType: String?
   public var status: PostStatus?
   public var scheduleAt: Date?
+  /// `queue` moves the post into the next free posting-queue slot.
+  public var schedule: String?
   public var repeatable: Bool?
   public var repeatableTimes: Int?
   public var repeatableGap: Int?
@@ -241,7 +248,7 @@ public struct UpdatePostRequest: Codable, Sendable {
   public init(
     accounts: [String]? = nil, content: [ContentBlock]? = nil, contentType: String? = nil,
     artifactType: String? = nil, status: PostStatus? = nil, scheduleAt: Date? = nil,
-    repeatable: Bool? = nil, repeatableTimes: Int? = nil, repeatableGap: Int? = nil,
+    schedule: String? = nil, repeatable: Bool? = nil, repeatableTimes: Int? = nil, repeatableGap: Int? = nil,
     repeatableGapUnit: String? = nil, labels: [String]? = nil, title: String? = nil,
     internalTitle: String? = nil, summary: String? = nil, autoPlug: Bool? = nil,
     autoPlugContent: String? = nil, settings: [String: JSONValue]? = nil
@@ -252,6 +259,7 @@ public struct UpdatePostRequest: Codable, Sendable {
     self.artifactType = artifactType
     self.status = status
     self.scheduleAt = scheduleAt
+    self.schedule = schedule
     self.repeatable = repeatable
     self.repeatableTimes = repeatableTimes
     self.repeatableGap = repeatableGap
@@ -266,7 +274,7 @@ public struct UpdatePostRequest: Codable, Sendable {
   }
 
   enum CodingKeys: String, CodingKey {
-    case accounts, content, status, repeatable, labels, title, summary, settings
+    case accounts, content, status, schedule, repeatable, labels, title, summary, settings
     case contentType = "content_type"
     case artifactType = "artifact_type"
     case scheduleAt = "schedule_at"
@@ -283,6 +291,29 @@ public struct UpdatePostRequest: Codable, Sendable {
 public struct DuplicatedPost: Codable, Sendable, Hashable {
   public let id: String
   public let status: PostStatus?
+}
+
+/// One account's delivery after an unpublish: whether the platform copy went.
+public struct UnpublishDelivery: Codable, Sendable, Hashable {
+  public let accountID: String?
+  public let platform: String?
+  public let removed: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case platform, removed
+    case accountID = "account_id"
+  }
+}
+
+/// The outcome of ``PostsResource/unpublish(_:)``.
+public struct UnpublishResult: Codable, Sendable, Hashable {
+  public let postStatus: PostStatus?
+  public let deliveries: [UnpublishDelivery]?
+
+  enum CodingKeys: String, CodingKey {
+    case deliveries
+    case postStatus = "post_status"
+  }
 }
 
 /// A post reference carried by several publishing responses.

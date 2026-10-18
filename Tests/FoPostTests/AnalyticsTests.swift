@@ -144,4 +144,43 @@ final class AnalyticsTests: XCTestCase {
     XCTAssertEqual(page.data.first?.metrics?.engagements, 90)
     XCTAssertEqual(page.meta?.total, 1)
   }
+
+  func testInboxReadsTheRollUp() async throws {
+    StubURLProtocol.script([
+      .json(
+        """
+        {"data":{"totals":{"received":40,"sent":22,"answered":18,"open":5,"conversations":12,
+         "median_response_minutes":35.5},"deltas":{"received":0.25,"sent":null,"answered":-0.1},
+         "series":[{"date":"2026-10-01","received":4,"sent":2,"answered":2}],
+         "by_platform":[{"platform":"instagram","received":30,"sent":15}],
+         "by_type":[{"type":"dm","count":20}],
+         "by_account":[{"account_id":"acc_1","platform":"instagram","username":"yourbrand",
+         "name":"Your Brand","avatar":null,"received":30,"sent":15}],
+         "response_time":[{"bucket":"under_1h","count":9}],
+         "heatmap":[{"weekday":1,"hour":9,"count":3}],"time_zone":"Europe/Zagreb"}}
+        """)
+    ])
+    let client = try makeStubClient()
+
+    let analytics = try await client.analytics.inbox(
+      workspaceID: "ws_1", days: 7, timeZone: "Europe/Zagreb")
+
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "GET")
+    XCTAssertEqual(request.path, "/v1/analytics/inbox")
+    XCTAssertEqual(request.query["workspace_id"], "ws_1")
+    XCTAssertEqual(request.query["days"], "7")
+    XCTAssertEqual(request.query["tz"], "Europe/Zagreb")
+    XCTAssertNil(request.query["account_id"])
+    XCTAssertEqual(analytics.totals?.received, 40)
+    XCTAssertEqual(analytics.totals?.medianResponseMinutes, 35.5)
+    XCTAssertEqual(analytics.deltas?.received, 0.25)
+    XCTAssertNil(analytics.deltas?.sent)
+    XCTAssertEqual(analytics.byPlatform?.first?.platform, "instagram")
+    XCTAssertEqual(analytics.byType?.first?.type, "dm")
+    XCTAssertEqual(analytics.byAccount?.first?.accountID, "acc_1")
+    XCTAssertEqual(analytics.responseTime?.first?.bucket, "under_1h")
+    XCTAssertEqual(analytics.heatmap?.first?.hour, 9)
+    XCTAssertEqual(analytics.timeZone, "Europe/Zagreb")
+  }
 }

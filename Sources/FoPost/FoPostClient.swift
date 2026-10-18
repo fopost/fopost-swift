@@ -62,10 +62,16 @@ public final class FoPostClient: Sendable {
 
   /// Posts, publishing, deliveries, and bulk operations.
   public var posts: PostsResource { PostsResource(transport: transport) }
+  /// The posting queue: recurring slots a post can be dropped into.
+  public var queue: QueueResource { QueueResource(transport: transport) }
   /// Workspaces, the tenant boundary every other resource is scoped to.
   public var workspaces: WorkspacesResource { WorkspacesResource(transport: transport) }
   /// Connected social accounts.
   public var accounts: AccountsResource { AccountsResource(transport: transport) }
+  /// Hosted connect links your own users connect accounts through.
+  public var connectSessions: ConnectSessionsResource {
+    ConnectSessionsResource(transport: transport)
+  }
   /// Account groups, named sets of accounts a post can target at once.
   public var accountGroups: AccountGroupsResource {
     AccountGroupsResource(transport: transport)
@@ -77,6 +83,8 @@ public final class FoPostClient: Sendable {
 
   /// What happened in a workspace, and the security audit log.
   public var activity: ActivityResource { ActivityResource(transport: transport) }
+  /// The request log: every API call made with the account's keys.
+  public var logs: LogsResource { LogsResource(transport: transport) }
 
   /// Articles and products on a connected site, by the platform's own ids.
   public var blogs: BlogsResource { BlogsResource(transport: transport) }
