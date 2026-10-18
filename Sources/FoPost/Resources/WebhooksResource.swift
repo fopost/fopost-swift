@@ -31,4 +31,29 @@ public struct WebhooksResource: Resource {
     try await httpPost(
       "/webhooks/\(escapePath(id))/test", unwrap: false, as: MessageResponse.self)
   }
+
+  /// A subscription's recent delivery attempts, newest first.
+  public func deliveries(
+    _ id: String, status: WebhookDeliveryStatus? = nil, limit: Int? = nil
+  ) async throws -> [WebhookDelivery] {
+    var query = Query()
+    query.add("status", status?.rawValue)
+    query.add("limit", limit)
+    return try await httpGet(
+      "/webhooks/\(escapePath(id))/deliveries", query: query, as: [WebhookDelivery].self)
+  }
+
+  /// One delivery attempt, with the payload that was sent.
+  public func delivery(_ id: String, deliveryID: String) async throws -> WebhookDelivery {
+    try await httpGet(
+      "/webhooks/\(escapePath(id))/deliveries/\(escapePath(deliveryID))",
+      as: WebhookDelivery.self)
+  }
+
+  /// Sends a delivery's payload again, as a new attempt under the same key.
+  public func redeliver(_ id: String, deliveryID: String) async throws {
+    _ = try await httpPost(
+      "/webhooks/\(escapePath(id))/deliveries/\(escapePath(deliveryID))/redeliver",
+      as: Empty.self)
+  }
 }
