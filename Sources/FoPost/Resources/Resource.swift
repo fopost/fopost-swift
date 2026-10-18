@@ -16,11 +16,11 @@ extension Resource {
 
   func httpPost<Response: Decodable>(
     _ path: String, body: (any Encodable & Sendable)? = nil, query: Query = Query(),
-    unwrap: Bool = true, as type: Response.Type
+    headers: [String: String] = [:], unwrap: Bool = true, as type: Response.Type
   ) async throws -> Response {
-    try await transport.send(
-      try request(method: "POST", path: path, body: body, query: query, unwrap: unwrap),
-      as: Response.self)
+    var request = try request(method: "POST", path: path, body: body, query: query, unwrap: unwrap)
+    request.headers = headers
+    return try await transport.send(request, as: Response.self)
   }
 
   func httpPut<Response: Decodable>(

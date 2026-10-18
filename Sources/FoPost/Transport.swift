@@ -11,6 +11,8 @@ struct HTTPRequest: Sendable {
   var query: [URLQueryItem] = []
   var body: Data?
   var contentType: String?
+  /// Extra headers for this call, such as `Idempotency-Key`.
+  var headers: [String: String] = [:]
   /// Peel a `{"data": ...}` envelope off the response before decoding.
   var unwrap: Bool = true
 }
@@ -100,6 +102,9 @@ final class Transport: @unchecked Sendable {
       urlRequest.setValue(configuration.userAgent, forHTTPHeaderField: "User-Agent")
       if let contentType = request.contentType {
         urlRequest.setValue(contentType, forHTTPHeaderField: "Content-Type")
+      }
+      for (name, value) in request.headers {
+        urlRequest.setValue(value, forHTTPHeaderField: name)
       }
 
       do {
