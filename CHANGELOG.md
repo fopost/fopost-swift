@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Changed: the blog resource follows the live wire format: `workspace_id` on
+  the query string, snake_case answers (bare objects, `{data: [...]}` lists),
+  and `website_secret` beside the settings on update.
+  `BlogSettingsUpdated.data` is now `settings`, and `BlogWebsiteTest.status` is
+  now `httpStatus`; a failed website test returns `ok` false with the API's
+  message instead of throwing.
 - Removed (breaking): `BlogSettings.autoPublish` and
   `UpdateBlogSettingsRequest.autoPublish`. The API no longer auto-publishes; an
   article publishes only after `submitArticle` moves it to review.
