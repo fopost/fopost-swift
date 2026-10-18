@@ -102,3 +102,22 @@ public struct ValidateMediaResult: Codable, Sendable, Hashable {
     case mimeType = "mime_type"
   }
 }
+
+/// Whether a subreddit exists and takes a post from one account. A private,
+/// banned, or missing subreddit answers 200 with `exists` false.
+public struct ValidateSubredditResult: Codable, Sendable, Hashable {
+  public let subreddit: String?
+  public let exists: Bool?
+  public let canPost: Bool?
+  public let over18: Bool?
+  public let flairEnabled: Bool?
+  /// True when the subreddit exists and takes a post from this account.
+  public let ok: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case subreddit, exists, ok
+    case canPost = "can_post"
+    case over18 = "over_18"
+    case flairEnabled = "flair_enabled"
+  }
+}

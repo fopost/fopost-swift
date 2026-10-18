@@ -106,6 +106,16 @@ public struct InboxResource: Resource {
     try await httpPost("/inbox/\(escapePath(id))/unlike", as: InboxItem.self)
   }
 
+  /// Votes the item up or down where the network ranks by votes (Reddit), or
+  /// takes an earlier vote back with `none`. Only where `canVote` is true. An
+  /// upvote is the same call a like makes, so `liked` moves with it. Also needs
+  /// the `publish` scope.
+  public func vote(_ id: String, direction: String) async throws -> InboxItem {
+    try await httpPost(
+      "/inbox/\(escapePath(id))/vote", body: InboxVoteRequest(direction: direction),
+      as: InboxItem.self)
+  }
+
   /// Pins our own comment. Also needs the `publish` scope.
   public func pin(_ id: String) async throws -> InboxItem {
     try await httpPost("/inbox/\(escapePath(id))/pin", as: InboxItem.self)
