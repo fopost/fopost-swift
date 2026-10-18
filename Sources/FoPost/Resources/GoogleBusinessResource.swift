@@ -26,6 +26,7 @@ public struct GoogleBusinessResource: Resource {
   // MARK: - Location
 
   /// The connected location, in the Business Information shape.
+  /// Wraps the API's `getGoogleBusinessLocation` operation.
   public func location(_ id: String) async throws -> JSONValue {
     try await httpGet(path(id, "/location"), as: JSONValue.self)
   }
@@ -34,6 +35,7 @@ public struct GoogleBusinessResource: Resource {
   /// `.null` value clears that field. Keys are the API's own snake_case
   /// names: `title`, `description`, `website_uri`, `primary_phone`,
   /// `additional_phones`, `store_code` and `regular_hours`.
+  /// Wraps the API's `updateGoogleBusinessLocation` operation.
   @discardableResult
   public func updateLocation(_ id: String, fields: [String: JSONValue]) async throws -> JSONValue {
     try await httpPatch(path(id, "/location"), body: fields, as: JSONValue.self)
@@ -43,6 +45,7 @@ public struct GoogleBusinessResource: Resource {
 
   /// The attribute values set on the location, or, with `available`, the
   /// attributes Google offers for its category and region.
+  /// Wraps the API's `getGoogleBusinessAttributes` operation.
   public func attributes(
     _ id: String, available: Bool = false, categoryName: String? = nil, regionCode: String? = nil,
     languageCode: String? = nil
@@ -56,6 +59,7 @@ public struct GoogleBusinessResource: Resource {
   }
 
   /// Changes only the named attributes; every other one is left alone.
+  /// Wraps the API's `updateGoogleBusinessAttributes` operation.
   @discardableResult
   public func updateAttributes(_ id: String, attributes: [JSONValue]) async throws -> JSONValue {
     try await httpPatch(
@@ -66,22 +70,26 @@ public struct GoogleBusinessResource: Resource {
   // MARK: - Food menus and services
 
   /// The location's food menus.
+  /// Wraps the API's `getGoogleBusinessMenus` operation.
   public func menus(_ id: String) async throws -> JSONValue {
     try await httpGet(path(id, "/menus"), as: JSONValue.self)
   }
 
   /// Google has no per-section patch, so the whole menu set is replaced.
+  /// Wraps the API's `replaceGoogleBusinessMenus` operation.
   @discardableResult
   public func replaceMenus(_ id: String, menus: [JSONValue]) async throws -> JSONValue {
     try await httpPut(path(id, "/menus"), body: ["menus": JSONValue.array(menus)], as: JSONValue.self)
   }
 
   /// The location's service list.
+  /// Wraps the API's `getGoogleBusinessServices` operation.
   public func services(_ id: String) async throws -> JSONValue {
     try await httpGet(path(id, "/services"), as: JSONValue.self)
   }
 
   /// Replaces the whole service list.
+  /// Wraps the API's `replaceGoogleBusinessServices` operation.
   @discardableResult
   public func replaceServices(_ id: String, serviceItems: [JSONValue]) async throws -> JSONValue {
     try await httpPut(
@@ -92,6 +100,7 @@ public struct GoogleBusinessResource: Resource {
   // MARK: - Photos
 
   /// The photos on the location.
+  /// Wraps the API's `listGoogleBusinessMedia` operation.
   public func media(_ id: String, pageSize: Int? = nil, pageToken: String? = nil) async throws
     -> JSONValue
   {
@@ -103,6 +112,7 @@ public struct GoogleBusinessResource: Resource {
 
   /// Adds a photo from the media library. The asset has to be in a workspace
   /// the caller can reach, and JPEG or PNG.
+  /// Wraps the API's `addGoogleBusinessMedia` operation.
   @discardableResult
   public func addMedia(
     _ id: String, mediaID: String, category: String = "ADDITIONAL", description: String? = nil
@@ -116,6 +126,7 @@ public struct GoogleBusinessResource: Resource {
   }
 
   /// Removes a photo by the media key Google returned.
+  /// Wraps the API's `deleteGoogleBusinessMedia` operation.
   @discardableResult
   public func deleteMedia(_ id: String, mediaKey: String) async throws -> JSONValue {
     try await httpDelete(path(id, "/media/\(escapePath(mediaKey))"), as: JSONValue.self)
@@ -124,11 +135,13 @@ public struct GoogleBusinessResource: Resource {
   // MARK: - Place action links
 
   /// The Book, Order and Reserve links on the listing.
+  /// Wraps the API's `listGoogleBusinessPlaceActions` operation.
   public func placeActions(_ id: String) async throws -> JSONValue {
     try await httpGet(path(id, "/place-actions"), as: JSONValue.self)
   }
 
   /// Adds an action link to the listing.
+  /// Wraps the API's `createGoogleBusinessPlaceAction` operation.
   @discardableResult
   public func createPlaceAction(
     _ id: String, uri: String, placeActionType: String, isPreferred: Bool? = nil
@@ -142,6 +155,7 @@ public struct GoogleBusinessResource: Resource {
   }
 
   /// Patches one action link; a nil argument is left alone.
+  /// Wraps the API's `updateGoogleBusinessPlaceAction` operation.
   @discardableResult
   public func updatePlaceAction(
     _ id: String, linkID: String, uri: String? = nil, isPreferred: Bool? = nil
@@ -154,6 +168,7 @@ public struct GoogleBusinessResource: Resource {
   }
 
   /// Removes one action link.
+  /// Wraps the API's `deleteGoogleBusinessPlaceAction` operation.
   @discardableResult
   public func deletePlaceAction(_ id: String, linkID: String) async throws -> JSONValue {
     try await httpDelete(path(id, "/place-actions/\(escapePath(linkID))"), as: JSONValue.self)
@@ -162,6 +177,7 @@ public struct GoogleBusinessResource: Resource {
   // MARK: - Verification
 
   /// The ways Google will let this location be verified.
+  /// Wraps the API's `getGoogleBusinessVerificationOptions` operation.
   public func verificationOptions(_ id: String, languageCode: String? = nil) async throws
     -> JSONValue
   {
@@ -173,6 +189,7 @@ public struct GoogleBusinessResource: Resource {
   /// Starts a verification. `method` is `ADDRESS`, `EMAIL`, `PHONE_CALL`,
   /// `SMS`, `AUTO` or `VETTED_PARTNER`; the response names the pending
   /// verification to complete with the PIN.
+  /// Wraps the API's `startGoogleBusinessVerification` operation.
   @discardableResult
   public func startVerification(
     _ id: String, method: String, languageCode: String? = nil, phoneNumber: String? = nil,
@@ -187,6 +204,7 @@ public struct GoogleBusinessResource: Resource {
   }
 
   /// Completes a pending verification with the PIN Google sent.
+  /// Wraps the API's `completeGoogleBusinessVerification` operation.
   @discardableResult
   public func completeVerification(_ id: String, verificationName: String, pin: String) async throws
     -> JSONValue
@@ -202,6 +220,7 @@ public struct GoogleBusinessResource: Resource {
 
   /// Daily impressions, calls, direction requests and clicks for the range.
   /// An empty `dailyMetrics` leaves the API's own default set.
+  /// Wraps the API's `getGoogleBusinessPerformance` operation.
   public func performance(
     _ id: String, startDate: String, endDate: String, dailyMetrics: [String] = []
   ) async throws -> JSONValue {
@@ -228,6 +247,7 @@ public struct GoogleBusinessResource: Resource {
 
   /// Hands the location to another workspace the caller owns. The connection
   /// and every row keyed to it move in one transaction.
+  /// Wraps the API's `assignGoogleBusinessLocation` operation.
   @discardableResult
   public func assign(_ id: String, workspaceID: String) async throws -> MovedAccount {
     try await httpPost(

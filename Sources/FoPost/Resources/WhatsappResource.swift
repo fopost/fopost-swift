@@ -17,11 +17,13 @@ public struct WhatsappResource: Resource {
   // MARK: - Profile
 
   /// The profile on the number, plus its quality rating and limit tier.
+  /// Wraps the API's `getWhatsappProfile` operation.
   public func profile(_ accountID: String) async throws -> WhatsappProfile {
     try await httpGet("\(base(accountID))/profile", as: WhatsappProfile.self)
   }
 
   /// A partial update: omitted fields keep their value.
+  /// Wraps the API's `updateWhatsappProfile` operation.
   public func updateProfile(_ accountID: String, _ body: UpdateWhatsappProfileRequest) async throws
     -> WhatsappProfile
   {
@@ -29,6 +31,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// A review, not a write: the number keeps its old name until it passes.
+  /// Wraps the API's `requestWhatsappDisplayName` operation.
   public func requestDisplayName(_ accountID: String, displayName: String) async throws {
     _ = try await httpPost(
       "\(base(accountID))/profile/display-name",
@@ -36,6 +39,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Sets the public username on the number.
+  /// Wraps the API's `setWhatsappUsername` operation.
   public func setUsername(_ accountID: String, username: String) async throws -> WhatsappProfile {
     try await httpPut(
       "\(base(accountID))/profile/username", body: ["username": username],
@@ -45,6 +49,7 @@ public struct WhatsappResource: Resource {
   // MARK: - Templates
 
   /// Every template on the account, with its review status.
+  /// Wraps the API's `listWhatsappTemplates` operation.
   public func templates(_ accountID: String, after: String? = nil) async throws
     -> [WhatsappTemplate]
   {
@@ -55,6 +60,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// The pre-written templates the platform offers, for adapting.
+  /// Wraps the API's `listWhatsappTemplateLibrary` operation.
   public func templateLibrary(_ accountID: String, search: String? = nil) async throws
     -> [JSONValue]
   {
@@ -65,6 +71,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// One template and the review status it currently has.
+  /// Wraps the API's `getWhatsappTemplate` operation.
   public func template(_ accountID: String, _ templateID: String) async throws -> WhatsappTemplate {
     try await httpGet(
       "\(base(accountID))/templates/\(escapePath(templateID))", as: WhatsappTemplate.self)
@@ -72,6 +79,7 @@ public struct WhatsappResource: Resource {
 
   /// Files a template for review. The result carries the status the platform
   /// assigned, which is `PENDING` on a normal submission.
+  /// Wraps the API's `createWhatsappTemplate` operation.
   public func createTemplate(_ accountID: String, _ body: CreateWhatsappTemplateRequest)
     async throws -> WhatsappTemplate
   {
@@ -79,6 +87,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Creates a template from one of the platform's library entries.
+  /// Wraps the API's `importWhatsappTemplate` operation.
   public func importTemplate(_ accountID: String, _ body: ImportWhatsappTemplateRequest)
     async throws -> WhatsappTemplate
   {
@@ -86,6 +95,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Edits a template. The name cannot change.
+  /// Wraps the API's `updateWhatsappTemplate` operation.
   public func updateTemplate(
     _ accountID: String, _ templateID: String, _ body: UpdateWhatsappTemplateRequest
   ) async throws -> WhatsappTemplate {
@@ -95,6 +105,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// The name is required: it is what the platform deletes by.
+  /// Wraps the API's `deleteWhatsappTemplate` operation.
   public func deleteTemplate(_ accountID: String, _ templateID: String, name: String) async throws {
     var query = Query()
     query.add("name", name)
@@ -105,11 +116,13 @@ public struct WhatsappResource: Resource {
   // MARK: - Groups
 
   /// The groups this number created.
+  /// Wraps the API's `listWhatsappGroups` operation.
   public func groups(_ accountID: String) async throws -> [WhatsappGroup] {
     try await httpGet("\(base(accountID))/groups", as: [WhatsappGroup].self)
   }
 
   /// Participation is invite-only: send the invite link, there is no add.
+  /// Wraps the API's `createWhatsappGroup` operation.
   public func createGroup(_ accountID: String, _ body: WhatsappGroupRequest) async throws
     -> WhatsappGroup
   {
@@ -117,11 +130,13 @@ public struct WhatsappResource: Resource {
   }
 
   /// One group and its participant count.
+  /// Wraps the API's `getWhatsappGroup` operation.
   public func group(_ accountID: String, _ groupID: String) async throws -> WhatsappGroup {
     try await httpGet("\(base(accountID))/groups/\(escapePath(groupID))", as: WhatsappGroup.self)
   }
 
   /// Changes a group's subject or description.
+  /// Wraps the API's `updateWhatsappGroup` operation.
   public func updateGroup(_ accountID: String, _ groupID: String, _ body: WhatsappGroupRequest)
     async throws -> WhatsappGroup
   {
@@ -130,6 +145,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Removes the group.
+  /// Wraps the API's `deleteWhatsappGroup` operation.
   public func deleteGroup(_ accountID: String, _ groupID: String) async throws {
     try await httpDelete("\(base(accountID))/groups/\(escapePath(groupID))")
   }
@@ -168,6 +184,7 @@ public struct WhatsappResource: Resource {
   // MARK: - Blocking
 
   /// The numbers this account has blocked.
+  /// Wraps the API's `listWhatsappBlocked` operation.
   public func blocked(_ accountID: String, after: String? = nil) async throws -> [String] {
     var query = Query()
     query.add("after", after)
@@ -175,12 +192,14 @@ public struct WhatsappResource: Resource {
   }
 
   /// Blocks up to 100 numbers, and names the ones the platform refused.
+  /// Wraps the API's `blockWhatsappUsers` operation.
   public func blockUsers(_ accountID: String, users: [String]) async throws -> WhatsappBlockResult {
     try await httpPost(
       "\(base(accountID))/block", body: ["users": users], as: WhatsappBlockResult.self)
   }
 
   /// Unblocks up to 100 numbers.
+  /// Wraps the API's `unblockWhatsappUsers` operation.
   public func unblockUsers(_ accountID: String, users: [String]) async throws
     -> WhatsappBlockResult
   {
@@ -192,11 +211,13 @@ public struct WhatsappResource: Resource {
   // MARK: - Commerce
 
   /// Whether the cart and catalog show on the number.
+  /// Wraps the API's `getWhatsappCommerce` operation.
   public func commerceSettings(_ accountID: String) async throws -> WhatsappCommerceSettings {
     try await httpGet("\(base(accountID))/commerce", as: WhatsappCommerceSettings.self)
   }
 
   /// Turns the cart or the catalog on or off.
+  /// Wraps the API's `updateWhatsappCommerce` operation.
   public func updateCommerceSettings(_ accountID: String, _ body: UpdateWhatsappCommerceRequest)
     async throws -> WhatsappCommerceSettings
   {
@@ -205,6 +226,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Points the number at a catalog the customer already owns.
+  /// Wraps the API's `linkWhatsappCatalog` operation.
   public func linkCatalog(_ accountID: String, catalogID: String) async throws
     -> WhatsappCommerceSettings
   {
@@ -216,16 +238,19 @@ public struct WhatsappResource: Resource {
   // MARK: - Flows
 
   /// The in-chat forms on this account, with their validation errors.
+  /// Wraps the API's `listWhatsappFlows` operation.
   public func flows(_ accountID: String) async throws -> [WhatsappFlow] {
     try await httpGet("\(base(accountID))/flows", as: [WhatsappFlow].self)
   }
 
   /// One flow and what the platform found wrong with it.
+  /// Wraps the API's `getWhatsappFlow` operation.
   public func flow(_ accountID: String, _ flowID: String) async throws -> WhatsappFlow {
     try await httpGet("\(base(accountID))/flows/\(escapePath(flowID))", as: WhatsappFlow.self)
   }
 
   /// Creates a draft flow; its screens are uploaded separately.
+  /// Wraps the API's `createWhatsappFlow` operation.
   public func createFlow(_ accountID: String, _ body: CreateWhatsappFlowRequest) async throws
     -> WhatsappFlow
   {
@@ -233,6 +258,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Changes a flow's name, categories or endpoint.
+  /// Wraps the API's `updateWhatsappFlow` operation.
   public func updateFlow(_ accountID: String, _ flowID: String, _ body: UpdateWhatsappFlowRequest)
     async throws -> WhatsappFlow
   {
@@ -241,6 +267,7 @@ public struct WhatsappResource: Resource {
   }
 
   /// Drafts only; a published flow is deprecated instead.
+  /// Wraps the API's `deleteWhatsappFlow` operation.
   public func deleteFlow(_ accountID: String, _ flowID: String) async throws {
     try await httpDelete("\(base(accountID))/flows/\(escapePath(flowID))")
   }
@@ -268,11 +295,13 @@ public struct WhatsappResource: Resource {
   }
 
   /// What people submitted through this account's flows.
+  /// Wraps the API's `listWhatsappFlowResponses` operation.
   public func flowResponses(_ accountID: String) async throws -> [WhatsappFlowResponse] {
     try await httpGet("\(base(accountID))/flows/responses", as: [WhatsappFlowResponse].self)
   }
 
   /// Whether a business public key is registered, and how the platform judged it.
+  /// Wraps the API's `getWhatsappEncryptionKey` operation.
   public func encryptionKeyStatus(_ accountID: String) async throws
     -> WhatsappEncryptionKeyStatus
   {
@@ -282,6 +311,7 @@ public struct WhatsappResource: Resource {
 
   /// Registers the public half of the key the platform encrypts a flow
   /// endpoint's payloads with. The private half stays with the customer.
+  /// Wraps the API's `setWhatsappEncryptionKey` operation.
   public func setEncryptionKey(_ accountID: String, businessPublicKey: String) async throws
     -> WhatsappEncryptionKeyStatus
   {
@@ -293,6 +323,7 @@ public struct WhatsappResource: Resource {
   // MARK: - Account state and sandbox
 
   /// The account review state and the number's quality and limit tier.
+  /// Wraps the API's `getWhatsappAccountEvents` operation.
   public func accountEvents(_ accountID: String) async throws -> JSONValue {
     try await httpGet("\(base(accountID))/events", as: JSONValue.self)
   }
