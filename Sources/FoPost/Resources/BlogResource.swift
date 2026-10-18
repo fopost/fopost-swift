@@ -27,7 +27,7 @@ public struct BlogResource: Resource {
   public func updateSettings(
     workspaceID: String, _ body: UpdateBlogSettingsRequest
   ) async throws -> BlogSettingsUpdated {
-    // `unwrap: false`: the secret sits beside `data`.
+    // `unwrap: false`: the secret sits beside the settings fields.
     try await httpPatch(
       "/blog/settings", body: WorkspaceScoped(workspaceID, body), unwrap: false,
       as: BlogSettingsUpdated.self)
@@ -42,11 +42,19 @@ public struct BlogResource: Resource {
   }
 
   /// Sends a signed `article.test` delivery to `websiteUrl` and reports what
-  /// it answered. A failing endpoint comes back as a `502` error whose body
-  /// still carries the status it answered.
+  /// it answered. A site that did not accept it comes back with `ok` false
+  /// rather than a thrown error.
   public func testWebsite(workspaceID: String) async throws -> BlogWebsiteTest {
-    try await httpPost(
-      "/blog/settings/website-test", body: WorkspaceBody(workspaceID), as: BlogWebsiteTest.self)
+    do {
+      return try await httpPost(
+        "/blog/settings/website-test", body: WorkspaceBody(workspaceID), as: BlogWebsiteTest.self)
+    } catch let error as FoPostError {
+      // A failed test answers 502 carrying the status the website gave.
+      guard let details = error.details, details.status == 502 else { throw error }
+      let body = try? JSONSerialization.jsonObject(with: details.body) as? [String: Any]
+      return BlogWebsiteTest(
+        ok: false, httpStatus: body?["http_status"] as? Int, error: details.message)
+    }
   }
 
   // MARK: - Keywords
@@ -188,7 +196,7 @@ public struct BlogResource: Resource {
 
   private func workspace(_ id: String) -> Query {
     var query = Query()
-    query.add("workspaceId", id)
+    query.add("workspace_id", id)
     return query
   }
 }

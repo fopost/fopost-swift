@@ -71,6 +71,11 @@ public struct BlogPlanRun: Codable, Sendable, Hashable {
   /// New keywords the run found.
   public let added: Int?
   public let finishedAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case status, error, added
+    case finishedAt = "finished_at"
+  }
 }
 
 /// Who asked for a keyword.
@@ -136,32 +141,88 @@ public struct BlogSettings: Codable, Sendable, Hashable {
   public let updatedAt: Date?
 
   enum CodingKeys: String, CodingKey {
-    case siteUrl, topic, audience, goal, focusTopics, avoidTopics, language, locationCode
-    case cadencePerWeek, reviewHoldDays, imageTier, inBodyImages, minWords, maxWords, targetKind
-    case targetPlatform, websiteUrl, hasWebsiteSecret, planRun, keywordDataAvailable, updatedAt
-    case brandVoiceID = "brandVoiceId"
-    case targetAccountID = "targetAccountId"
+    case topic, audience, goal, language
+    case siteUrl = "site_url"
+    case focusTopics = "focus_topics"
+    case avoidTopics = "avoid_topics"
+    case locationCode = "location_code"
+    case cadencePerWeek = "cadence_per_week"
+    case reviewHoldDays = "review_hold_days"
+    case imageTier = "image_tier"
+    case inBodyImages = "in_body_images"
+    case minWords = "min_words"
+    case maxWords = "max_words"
+    case brandVoiceID = "brand_voice_id"
+    case targetKind = "target_kind"
+    case targetAccountID = "target_account_id"
+    case targetPlatform = "target_platform"
+    case websiteUrl = "website_url"
+    case hasWebsiteSecret = "has_website_secret"
+    case planRun = "plan_run"
+    case keywordDataAvailable = "keyword_data_available"
+    case updatedAt = "updated_at"
   }
 }
 
 /// The answer to ``BlogResource/updateSettings(workspaceID:_:)``.
 public struct BlogSettingsUpdated: Codable, Sendable, Hashable {
-  public let data: BlogSettings
+  public let settings: BlogSettings
   /// The website signing secret, present only on the call that first set
   /// `websiteUrl`. Store it now; it is never shown again.
   public let websiteSecret: String?
+
+  enum CodingKeys: String, CodingKey {
+    case websiteSecret = "website_secret"
+  }
+
+  // The secret sits beside the settings fields, not in an envelope.
+  public init(from decoder: any Decoder) throws {
+    settings = try BlogSettings(from: decoder)
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    websiteSecret = try container.decodeIfPresent(String.self, forKey: .websiteSecret)
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    try settings.encode(to: encoder)
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(websiteSecret, forKey: .websiteSecret)
+  }
 }
 
 /// A freshly rotated website signing secret, shown once.
 public struct BlogWebsiteSecret: Codable, Sendable, Hashable {
   public let websiteSecret: String
+
+  enum CodingKeys: String, CodingKey {
+    case websiteSecret = "website_secret"
+  }
 }
 
-/// What the website target answered to a test delivery.
+/// What the website target answered to a test delivery. `error` explains a
+/// failed test.
 public struct BlogWebsiteTest: Codable, Sendable, Hashable {
-  public let ok: Bool
-  public let status: Int?
-  public let error: String?
+  public var ok: Bool
+  /// The HTTP status the website answered, when it answered.
+  public var httpStatus: Int?
+  public var error: String?
+
+  public init(ok: Bool, httpStatus: Int?, error: String?) {
+    self.ok = ok
+    self.httpStatus = httpStatus
+    self.error = error
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case ok, error
+    case httpStatus = "http_status"
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    ok = try container.decodeIfPresent(Bool.self, forKey: .ok) ?? true
+    httpStatus = try container.decodeIfPresent(Int.self, forKey: .httpStatus)
+    error = try container.decodeIfPresent(String.self, forKey: .error)
+  }
 }
 
 /// The body of ``BlogResource/updateSettings(workspaceID:_:)``. Only the
@@ -290,6 +351,14 @@ public struct BlogKeyword: Codable, Sendable, Hashable {
   /// Why the keyword serves the blog goal.
   public let fitReason: String?
   public let createdAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case id, keyword, difficulty, cpc, intent, source, status
+    case searchVolume = "search_volume"
+    case plannedFor = "planned_for"
+    case fitReason = "fit_reason"
+    case createdAt = "created_at"
+  }
 }
 
 /// The body of ``BlogResource/addKeyword(workspaceID:_:)``.
@@ -384,9 +453,36 @@ public struct BlogArticleImage: Codable, Sendable, Hashable {
   /// featured image.
   public let position: Int?
 
+  public init(mediaID: String, url: String, alt: String, position: Int? = nil) {
+    self.mediaID = mediaID
+    self.url = url
+    self.alt = alt
+    self.position = position
+  }
+
   enum CodingKeys: String, CodingKey {
     case url, alt, position
-    case mediaID = "mediaId"
+    case mediaID = "media_id"
+    case legacyMediaID = "mediaId"
+  }
+
+  // Articles answer `media_id`; the `article.published` webhook sends `mediaId`.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    mediaID =
+      try container.decodeIfPresent(String.self, forKey: .mediaID)
+      ?? container.decode(String.self, forKey: .legacyMediaID)
+    url = try container.decode(String.self, forKey: .url)
+    alt = try container.decode(String.self, forKey: .alt)
+    position = try container.decodeIfPresent(Int.self, forKey: .position)
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(mediaID, forKey: .mediaID)
+    try container.encode(url, forKey: .url)
+    try container.encode(alt, forKey: .alt)
+    try container.encodeIfPresent(position, forKey: .position)
   }
 }
 
@@ -411,6 +507,20 @@ public struct BlogArticle: Codable, Sendable, Hashable {
   public let error: String?
   public let createdAt: Date?
   public let updatedAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case id, title, slug, keyword, excerpt, tags, status, origin, error
+    case metaTitle = "meta_title"
+    case metaDescription = "meta_description"
+    case featuredImage = "featured_image"
+    case wordCount = "word_count"
+    case reviewUntil = "review_until"
+    case publishAt = "publish_at"
+    case publishedAt = "published_at"
+    case publishedUrl = "published_url"
+    case createdAt = "created_at"
+    case updatedAt = "updated_at"
+  }
 }
 
 /// An article with its body, outline, brief, and images.
@@ -441,6 +551,23 @@ public struct BlogArticleFull: Codable, Sendable, Hashable {
   public let bodyMarkdown: String?
   public let bodyHtml: String?
   public let images: [BlogArticleImage]?
+
+  enum CodingKeys: String, CodingKey {
+    case id, title, slug, keyword, excerpt, tags, status, origin, error, instructions, outline
+    case brief, images
+    case metaTitle = "meta_title"
+    case metaDescription = "meta_description"
+    case featuredImage = "featured_image"
+    case wordCount = "word_count"
+    case reviewUntil = "review_until"
+    case publishAt = "publish_at"
+    case publishedAt = "published_at"
+    case publishedUrl = "published_url"
+    case createdAt = "created_at"
+    case updatedAt = "updated_at"
+    case bodyMarkdown = "body_markdown"
+    case bodyHtml = "body_html"
+  }
 }
 
 /// The body of ``BlogResource/requestArticle(workspaceID:_:)``. One of
