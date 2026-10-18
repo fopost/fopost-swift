@@ -235,6 +235,53 @@ final class InboxTests: XCTestCase {
     }
   }
 
+  func testXPostLookupAndSearchPassTheAccountOnTheQuery() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([
+      .json(
+        #"{"data":{"id":"1790000000000000001","text":"Hello","permalink":"https://x.com/yourbrand/status/1790000000000000001","author_name":"Your Brand","author_handle":"yourbrand","author_followers":1200,"conversation_id":"1790000000000000000","parent_external_id":null,"likes":4,"replies":1,"reposts":2,"quotes":0,"platform_created_at":"2026-10-18T09:00:00.000Z"}}"#
+      )
+    ])
+    let post = try await client.inbox.xPost("1790000000000000001", accountID: "acc_1")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "GET")
+    XCTAssertEqual(request.path, "/v1/x/posts/1790000000000000001")
+    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(post.id, "1790000000000000001")
+    XCTAssertEqual(post.authorHandle, "yourbrand")
+    XCTAssertEqual(post.authorFollowers, 1200)
+    XCTAssertEqual(post.conversationID, "1790000000000000000")
+    XCTAssertNil(post.parentExternalID)
+    XCTAssertEqual(post.reposts, 2)
+    XCTAssertEqual(post.platformCreatedAt, Timestamps.parse("2026-10-18T09:00:00.000Z"))
+
+    StubURLProtocol.script([
+      .json(
+        #"{"data":[{"id":"1790000000000000002","text":"fopost launch"}],"meta":{"next_token":"b26v89c"}}"#
+      )
+    ])
+    let page = try await client.inbox.searchXPosts(
+      q: "fopost -is:retweet", accountID: "acc_1", maxResults: 50, nextToken: "a1b2")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "GET")
+    XCTAssertEqual(request.path, "/v1/x/search")
+    XCTAssertEqual(request.query["q"], "fopost -is:retweet")
+    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(request.query["max_results"], "50")
+    XCTAssertEqual(request.query["next_token"], "a1b2")
+    XCTAssertEqual(page.data.first?.id, "1790000000000000002")
+    XCTAssertEqual(page.nextToken, "b26v89c")
+
+    StubURLProtocol.script([.json(#"{"data":[],"meta":{"next_token":null}}"#)])
+    let last = try await client.inbox.searchXPosts(q: "fopost", accountID: "acc_1")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertNil(request.query["max_results"])
+    XCTAssertNil(request.query["next_token"])
+    XCTAssertTrue(last.data.isEmpty)
+    XCTAssertNil(last.nextToken)
+  }
+
   func testLikePinAndReactPostToTheirActions() async throws {
     let client = try makeStubClient()
 

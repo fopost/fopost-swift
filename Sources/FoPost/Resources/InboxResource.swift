@@ -195,6 +195,32 @@ public struct InboxResource: Resource {
     try await httpDelete("/inbox/\(escapePath(id))", as: InboxDeleteResult.self)
   }
 
+  // MARK: - X pass-through reads
+
+  /// One X post by its numeric id, read with the X account named by
+  /// `accountID`. A 404 means X has no such post. Every call is an X API
+  /// call metered to the workspace.
+  public func xPost(_ id: String, accountID: String) async throws -> XPost {
+    var query = Query()
+    query.add("account_id", accountID)
+    return try await httpGet("/x/posts/\(escapePath(id))", query: query, as: XPost.self)
+  }
+
+  /// Recent X posts matching `q` (1 to 512 characters), read with the X
+  /// account named by `accountID`. `maxResults` is 10 to 100; pass the page's
+  /// `nextToken` back for the one after it. Every call is an X API call
+  /// metered to the workspace.
+  public func searchXPosts(
+    q: String, accountID: String, maxResults: Int? = nil, nextToken: String? = nil
+  ) async throws -> XSearchPage {
+    var query = Query()
+    query.add("q", q)
+    query.add("account_id", accountID)
+    query.add("max_results", maxResults)
+    query.add("next_token", nextToken)
+    return try await httpGet("/x/search", query: query, unwrap: false, as: XSearchPage.self)
+  }
+
   /// Replies an automation or the agent drafted that a person still has to
   /// send.
   public func approvals(workspaceID: String? = nil) async throws -> [InboxApproval] {
