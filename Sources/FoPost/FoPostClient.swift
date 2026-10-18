@@ -68,6 +68,10 @@ public final class FoPostClient: Sendable {
   public var workspaces: WorkspacesResource { WorkspacesResource(transport: transport) }
   /// Connected social accounts.
   public var accounts: AccountsResource { AccountsResource(transport: transport) }
+  /// Hosted connect links your own users connect accounts through.
+  public var connectSessions: ConnectSessionsResource {
+    ConnectSessionsResource(transport: transport)
+  }
   /// Account groups, named sets of accounts a post can target at once.
   public var accountGroups: AccountGroupsResource {
     AccountGroupsResource(transport: transport)
