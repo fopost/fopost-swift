@@ -171,6 +171,10 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let canReply: Bool?
   public let hidden: Bool?
   public let liked: Bool?
+  /// Reposted to the account's own timeline. X only.
+  public let reposted: Bool?
+  /// Bookmarked on the account. X only.
+  public let bookmarked: Bool?
   /// How we voted, where the platform ranks by votes: `up` or `down`.
   public let vote: String?
   public let pinned: Bool?
@@ -181,6 +185,10 @@ public struct InboxItem: Codable, Sendable, Hashable {
   /// A comment someone left, or our own reply.
   public let canDelete: Bool?
   public let canLike: Bool?
+  /// The network has a repost. X only.
+  public let canRepost: Bool?
+  /// The network has bookmarks. X only.
+  public let canBookmark: Bool?
   /// Up and down votes, where the platform ranks by them.
   public let canVote: Bool?
   /// Our own comment only.

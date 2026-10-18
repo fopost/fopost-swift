@@ -116,6 +116,29 @@ public struct InboxResource: Resource {
       as: InboxItem.self)
   }
 
+  /// Reposts an X post to the account's own timeline, where `canRepost` is
+  /// true. Also needs the `publish` scope. An X account connected before the
+  /// repost grant answers `409 reconnect_required` until it is reconnected.
+  public func repost(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/repost", as: InboxItem.self)
+  }
+
+  /// Removes our repost. Also needs the `publish` scope.
+  public func unrepost(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/unrepost", as: InboxItem.self)
+  }
+
+  /// Bookmarks an X post on the account, where `canBookmark` is true. Also
+  /// needs the `publish` scope.
+  public func bookmark(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/bookmark", as: InboxItem.self)
+  }
+
+  /// Removes our bookmark. Also needs the `publish` scope.
+  public func unbookmark(_ id: String) async throws -> InboxItem {
+    try await httpPost("/inbox/\(escapePath(id))/unbookmark", as: InboxItem.self)
+  }
+
   /// Pins our own comment. Also needs the `publish` scope.
   public func pin(_ id: String) async throws -> InboxItem {
     try await httpPost("/inbox/\(escapePath(id))/pin", as: InboxItem.self)

@@ -205,6 +205,36 @@ final class InboxTests: XCTestCase {
     XCTAssertEqual(accounts.first?.canStartConversation, true)
   }
 
+  func testRepostAndBookmarkPostToTheirActionsAndDecodeTheFlags() async throws {
+    let client = try makeStubClient()
+
+    for (action, path) in [
+      ("repost", "/v1/inbox/item_1/repost"), ("unrepost", "/v1/inbox/item_1/unrepost"),
+      ("bookmark", "/v1/inbox/item_1/bookmark"), ("unbookmark", "/v1/inbox/item_1/unbookmark"),
+    ] {
+      StubURLProtocol.script([
+        .json(
+          #"{"data":{"id":"item_1","platform":"x","reposted":true,"bookmarked":false,"canRepost":true,"canBookmark":true}}"#
+        )
+      ])
+      let item: InboxItem
+      switch action {
+      case "repost": item = try await client.inbox.repost("item_1")
+      case "unrepost": item = try await client.inbox.unrepost("item_1")
+      case "bookmark": item = try await client.inbox.bookmark("item_1")
+      default: item = try await client.inbox.unbookmark("item_1")
+      }
+      XCTAssertEqual(item.id, "item_1")
+      XCTAssertEqual(item.reposted, true)
+      XCTAssertEqual(item.bookmarked, false)
+      XCTAssertEqual(item.canRepost, true)
+      XCTAssertEqual(item.canBookmark, true)
+      let request = try XCTUnwrap(StubURLProtocol.requests.first)
+      XCTAssertEqual(request.method, "POST")
+      XCTAssertEqual(request.path, path)
+    }
+  }
+
   func testLikePinAndReactPostToTheirActions() async throws {
     let client = try makeStubClient()
 
