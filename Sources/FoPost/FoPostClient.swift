@@ -83,6 +83,8 @@ public final class FoPostClient: Sendable {
 
   /// What happened in a workspace, and the security audit log.
   public var activity: ActivityResource { ActivityResource(transport: transport) }
+  /// The request log: every API call made with the account's keys.
+  public var logs: LogsResource { LogsResource(transport: transport) }
 
   /// Articles and products on a connected site, by the platform's own ids.
   public var blogs: BlogsResource { BlogsResource(transport: transport) }
