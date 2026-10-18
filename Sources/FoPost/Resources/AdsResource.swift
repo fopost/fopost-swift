@@ -156,11 +156,142 @@ public struct AdsResource: Resource {
   }
 
   /// Offline conversions against a pixel the ad account owns. Identifiers are
-  /// hashed before anything leaves FoPost.
-  public func uploadConversions(_ body: UploadConversionsRequest) async throws
-    -> ConversionsAccepted
+  /// hashed before anything leaves FoPost. An `idempotencyKey` makes a retry
+  /// safe: a repeat answers `replayed` true and sends nothing.
+  public func uploadConversions(
+    _ body: UploadConversionsRequest, idempotencyKey: String? = nil
+  ) async throws -> ConversionsAccepted {
+    try await httpPost(
+      "/ads/conversions", body: body, headers: idempotencyHeaders(idempotencyKey),
+      as: ConversionsAccepted.self)
+  }
+
+  /// The Conversions API send. Same body as ``uploadConversions(_:idempotencyKey:)``,
+  /// but the key is required: a repeat answers `replayed` true and sends nothing.
+  public func sendPixelConversions(
+    _ body: UploadConversionsRequest, idempotencyKey: String
+  ) async throws -> ConversionsAccepted {
+    try await httpPost(
+      "/ads/conversions/events", body: body, headers: idempotencyHeaders(idempotencyKey),
+      as: ConversionsAccepted.self)
+  }
+
+  /// Stored conversion uploads, newest first, with their events as hashes.
+  public func conversionBatches(
+    workspaceID: String? = nil, connectionID: String? = nil, limit: Int? = nil
+  ) async throws -> [ConversionBatch] {
+    var query = Query()
+    query.add("workspace_id", workspaceID)
+    query.add("connection_id", connectionID)
+    query.add("limit", limit)
+    return try await httpGet("/ads/conversions/events", query: query, as: [ConversionBatch].self)
+  }
+
+  /// The pixels on one ad account.
+  public func pixels(
+    connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> [AdPixel] {
+    try await httpGet(
+      "/ads/pixels", query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: [AdPixel].self)
+  }
+
+  /// Creates a pixel. The answer carries the install script.
+  public func createPixel(_ body: CreatePixelRequest) async throws -> AdPixelDetail {
+    try await httpPost("/ads/pixels", body: body, as: AdPixelDetail.self)
+  }
+
+  /// One pixel with its install script and settings.
+  public func pixel(
+    _ id: String, connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> AdPixelDetail {
+    try await httpGet(
+      pixelPath(id), query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: AdPixelDetail.self)
+  }
+
+  /// Renames a pixel or changes how its data may be used.
+  public func updatePixel(_ id: String, _ body: UpdatePixelRequest) async throws
+    -> AdPixelDetail
   {
-    try await httpPost("/ads/conversions", body: body, as: ConversionsAccepted.self)
+    try await httpPatch(pixelPath(id), body: body, as: AdPixelDetail.self)
+  }
+
+  /// Shares a pixel with another ad account under the same business portfolio.
+  public func sharePixel(
+    _ id: String, targetAdAccountID: String, workspaceID: String, connectionID: String,
+    adAccountID: String
+  ) async throws {
+    try await transport.send(
+      try jsonRequest(
+        method: "POST", path: pixelPath(id, "/share"),
+        body: SharePixelRequest(
+          workspaceId: workspaceID, connectionId: connectionID, adAccountId: adAccountID,
+          targetAdAccountId: targetAdAccountID),
+        query: Query()))
+  }
+
+  /// What a pixel recorded over the last 28 days, by event name.
+  public func pixelStats(
+    _ id: String, connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> AdPixelStats {
+    try await httpGet(
+      pixelPath(id, "/stats"), query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: AdPixelStats.self)
+  }
+
+  /// How well each event's identifiers match people, as the network scores it.
+  public func eventMatchQuality(
+    _ id: String, connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> [EventMatchQuality] {
+    try await httpGet(
+      pixelPath(id, "/match-quality"),
+      query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: [EventMatchQuality].self)
+  }
+
+  /// The custom conversions on one ad account.
+  public func customConversions(
+    connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> [CustomConversion] {
+    try await httpGet(
+      "/ads/custom-conversions", query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: [CustomConversion].self)
+  }
+
+  /// Creates a custom conversion from a pixel event and a URL rule.
+  public func createCustomConversion(_ body: CreateCustomConversionRequest) async throws
+    -> CustomConversion
+  {
+    try await httpPost("/ads/custom-conversions", body: body, as: CustomConversion.self)
+  }
+
+  /// One custom conversion.
+  public func customConversion(
+    _ id: String, connectionID: String, adAccountID: String, workspaceID: String? = nil
+  ) async throws -> CustomConversion {
+    try await httpGet(
+      customConversionPath(id), query: adAccountQuery(workspaceID, connectionID, adAccountID),
+      as: CustomConversion.self)
+  }
+
+  /// Changes a custom conversion's name, description, or default value.
+  public func updateCustomConversion(
+    _ id: String, _ body: UpdateCustomConversionRequest
+  ) async throws -> CustomConversion {
+    try await httpPatch(customConversionPath(id), body: body, as: CustomConversion.self)
+  }
+
+  /// Deletes a custom conversion. The network keeps the history.
+  public func deleteCustomConversion(
+    _ id: String, workspaceID: String, connectionID: String, adAccountID: String
+  ) async throws {
+    try await transport.send(
+      try jsonRequest(
+        method: "DELETE", path: customConversionPath(id),
+        body: AdAccountScopeRequest(
+          workspaceId: workspaceID, connectionId: connectionID, adAccountId: adAccountID),
+        query: Query()))
   }
 
   /// One page of an ad's comments. Pass `nextCursor` back as `after`.
@@ -545,6 +676,27 @@ public struct AdsResource: Resource {
 
   private func conversionRulePath(_ id: String, _ suffix: String = "") -> String {
     "/ads/linkedin/conversion-rules/\(escapePath(id))\(suffix)"
+  }
+
+  private func pixelPath(_ id: String, _ suffix: String = "") -> String {
+    "/ads/pixels/\(escapePath(id))\(suffix)"
+  }
+
+  private func customConversionPath(_ id: String) -> String {
+    "/ads/custom-conversions/\(escapePath(id))"
+  }
+
+  private func idempotencyHeaders(_ key: String?) -> [String: String] {
+    guard let key, !key.isEmpty else { return [:] }
+    return ["Idempotency-Key": key]
+  }
+
+  private func adAccountQuery(
+    _ workspaceID: String?, _ connectionID: String, _ adAccountID: String
+  ) -> Query {
+    var query = metaQuery(workspaceID, connectionID)
+    query.add("ad_account_id", adAccountID)
+    return query
   }
 
   /// A request with a JSON body on a method the shared helpers do not carry one for.
