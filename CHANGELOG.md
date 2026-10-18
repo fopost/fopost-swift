@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Changed: the blog resource follows the live wire format: `workspace_id` on
+  the query string, snake_case answers (bare objects, `{data: [...]}` lists),
+  and `website_secret` beside the settings on update.
+  `BlogSettingsUpdated.data` is now `settings`, and `BlogWebsiteTest.status` is
+  now `httpStatus`; a failed website test returns `ok` false with the API's
+  message instead of throwing.
+- Removed (breaking): `BlogSettings.autoPublish` and
+  `UpdateBlogSettingsRequest.autoPublish`. The API no longer auto-publishes; an
+  article publishes only after `submitArticle` moves it to review.
+- Added: `blog.suggestSeeds(workspaceID:seeds:prompt:)` suggests about 10 search
+  terms from the blog goal and topics (`ai` scope, `BlogSeedSuggestions`); pass
+  the current seeds to refine and a prompt to steer.
+- Added: `blog.submitArticle(workspaceID:_:)` moves a draft, failed or rejected
+  article to the new `BlogArticleStatus.inReview` (`posts` scope). Publishing
+  and setting `publishAt` now need an article in review; a draft answers 409.
+- Added: `BlogSettings.goal` (`BlogGoal`), `focusTopics`, `avoidTopics` and
+  `planRun` (`BlogPlanRun`, `BlogPlanRunStatus`), with `goal`, `focusTopics` and
+  `avoidTopics` on `UpdateBlogSettingsRequest`; `BlogKeyword.fitReason`.
+- Changed: `planKeywords` no longer fills the calendar. Results land as
+  `.suggested`, and setting a keyword to `.planned` picks it. `reviewHoldDays`
+  is now the days before its planned date that a picked keyword starts being
+  written.
 - Added: `media.limits(workspaceID:)` returns `UploadLimits`: the largest file
   the account may upload by any route (`maxFileBytes`, growing with connected
   accounts or the Large Uploads add-on), the multipart ceiling
