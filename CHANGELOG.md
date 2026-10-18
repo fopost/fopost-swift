@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-10-18
 
 - Changed: the blog resource follows the live wire format: `workspace_id` on
   the query string, snake_case answers (bare objects, `{data: [...]}` lists),
@@ -44,3 +44,15 @@
   `code`, `maxFileBytes`, and `upgradeURL`.
 - Changed: sizes are `Int64` (`presign(size:)`, `UploadedMedia.size`,
   `MediaLibraryItem.size`).
+- Added: Reddit destinations on a connected account: `accounts.redditSubreddits(_:)`,
+  `accounts.redditSubredditRules(_:subreddit:)`, `accounts.redditFlairs(_:subreddit:)`
+  and `accounts.setRedditDefaultSubreddit(_:subreddit:)` (`RedditSubreddit`,
+  `RedditSubredditRules`, `RedditFlair`; a flair id is valid only in the
+  subreddit it came from). `validate.subreddit(accountId:name:)` checks a
+  subreddit before posting. `inbox.vote(_:direction:)` votes an item `up`,
+  `down` or `none` where `canVote` is true (`publish` scope).
+- Added: `client.blogs` for articles and products that already live on a
+  connected site, addressed by the platform's own ids: `listBlogs`,
+  `listArticles`, `getArticle`, `createArticle`, `updateArticle`,
+  `deleteArticle`, `listProducts` and `updateProduct`. `updateArticle` edits the
+  live article in place. Reads need `posts`, writes `publish`.
