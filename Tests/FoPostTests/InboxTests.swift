@@ -205,6 +205,83 @@ final class InboxTests: XCTestCase {
     XCTAssertEqual(accounts.first?.canStartConversation, true)
   }
 
+  func testRepostAndBookmarkPostToTheirActionsAndDecodeTheFlags() async throws {
+    let client = try makeStubClient()
+
+    for (action, path) in [
+      ("repost", "/v1/inbox/item_1/repost"), ("unrepost", "/v1/inbox/item_1/unrepost"),
+      ("bookmark", "/v1/inbox/item_1/bookmark"), ("unbookmark", "/v1/inbox/item_1/unbookmark"),
+    ] {
+      StubURLProtocol.script([
+        .json(
+          #"{"data":{"id":"item_1","platform":"x","reposted":true,"bookmarked":false,"canRepost":true,"canBookmark":true}}"#
+        )
+      ])
+      let item: InboxItem
+      switch action {
+      case "repost": item = try await client.inbox.repost("item_1")
+      case "unrepost": item = try await client.inbox.unrepost("item_1")
+      case "bookmark": item = try await client.inbox.bookmark("item_1")
+      default: item = try await client.inbox.unbookmark("item_1")
+      }
+      XCTAssertEqual(item.id, "item_1")
+      XCTAssertEqual(item.reposted, true)
+      XCTAssertEqual(item.bookmarked, false)
+      XCTAssertEqual(item.canRepost, true)
+      XCTAssertEqual(item.canBookmark, true)
+      let request = try XCTUnwrap(StubURLProtocol.requests.first)
+      XCTAssertEqual(request.method, "POST")
+      XCTAssertEqual(request.path, path)
+    }
+  }
+
+  func testXPostLookupAndSearchPassTheAccountOnTheQuery() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([
+      .json(
+        #"{"data":{"id":"1790000000000000001","text":"Hello","permalink":"https://x.com/yourbrand/status/1790000000000000001","author_name":"Your Brand","author_handle":"yourbrand","author_followers":1200,"conversation_id":"1790000000000000000","parent_external_id":null,"likes":4,"replies":1,"reposts":2,"quotes":0,"platform_created_at":"2026-10-18T09:00:00.000Z"}}"#
+      )
+    ])
+    let post = try await client.inbox.xPost("1790000000000000001", accountID: "acc_1")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "GET")
+    XCTAssertEqual(request.path, "/v1/x/posts/1790000000000000001")
+    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(post.id, "1790000000000000001")
+    XCTAssertEqual(post.authorHandle, "yourbrand")
+    XCTAssertEqual(post.authorFollowers, 1200)
+    XCTAssertEqual(post.conversationID, "1790000000000000000")
+    XCTAssertNil(post.parentExternalID)
+    XCTAssertEqual(post.reposts, 2)
+    XCTAssertEqual(post.platformCreatedAt, Timestamps.parse("2026-10-18T09:00:00.000Z"))
+
+    StubURLProtocol.script([
+      .json(
+        #"{"data":[{"id":"1790000000000000002","text":"fopost launch"}],"meta":{"next_token":"b26v89c"}}"#
+      )
+    ])
+    let page = try await client.inbox.searchXPosts(
+      q: "fopost -is:retweet", accountID: "acc_1", maxResults: 50, nextToken: "a1b2")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "GET")
+    XCTAssertEqual(request.path, "/v1/x/search")
+    XCTAssertEqual(request.query["q"], "fopost -is:retweet")
+    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(request.query["max_results"], "50")
+    XCTAssertEqual(request.query["next_token"], "a1b2")
+    XCTAssertEqual(page.data.first?.id, "1790000000000000002")
+    XCTAssertEqual(page.nextToken, "b26v89c")
+
+    StubURLProtocol.script([.json(#"{"data":[],"meta":{"next_token":null}}"#)])
+    let last = try await client.inbox.searchXPosts(q: "fopost", accountID: "acc_1")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertNil(request.query["max_results"])
+    XCTAssertNil(request.query["next_token"])
+    XCTAssertTrue(last.data.isEmpty)
+    XCTAssertNil(last.nextToken)
+  }
+
   func testLikePinAndReactPostToTheirActions() async throws {
     let client = try makeStubClient()
 

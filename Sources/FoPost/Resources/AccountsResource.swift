@@ -648,6 +648,24 @@ public struct AccountsResource: Resource {
       as: InstagramStoryInsights.self)
   }
 
+  /// Follows an X user from this X account. `userID` is the numeric X user id.
+  /// Needs the `inbox` and `publish` scopes. An X account connected before the
+  /// follow grant answers `409 reconnect_required` until it is reconnected;
+  /// every call is an X API call metered to the workspace.
+  public func followXUser(_ id: String, userID: String) async throws -> XFollowResult {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/x/follow", body: XFollowRequest(userID: userID),
+      as: XFollowResult.self)
+  }
+
+  /// Unfollows an X user from this X account. Same scopes and metering as
+  /// ``followXUser(_:userID:)``.
+  public func unfollowXUser(_ id: String, userID: String) async throws -> XFollowResult {
+    try await httpPost(
+      "/accounts/\(escapePath(id))/x/unfollow", body: XFollowRequest(userID: userID),
+      as: XFollowResult.self)
+  }
+
   /// Organizations a LinkedIn post can mention. People are not searchable:
   /// LinkedIn has no public person search.
   public func linkedinMentions(_ id: String, query: String) async throws -> [LinkedInMention] {

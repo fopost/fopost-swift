@@ -171,6 +171,10 @@ public struct InboxItem: Codable, Sendable, Hashable {
   public let canReply: Bool?
   public let hidden: Bool?
   public let liked: Bool?
+  /// Reposted to the account's own timeline. X only.
+  public let reposted: Bool?
+  /// Bookmarked on the account. X only.
+  public let bookmarked: Bool?
   /// How we voted, where the platform ranks by votes: `up` or `down`.
   public let vote: String?
   public let pinned: Bool?
@@ -181,6 +185,10 @@ public struct InboxItem: Codable, Sendable, Hashable {
   /// A comment someone left, or our own reply.
   public let canDelete: Bool?
   public let canLike: Bool?
+  /// The network has a repost. X only.
+  public let canRepost: Bool?
+  /// The network has bookmarks. X only.
+  public let canBookmark: Bool?
   /// Up and down votes, where the platform ranks by them.
   public let canVote: Bool?
   /// Our own comment only.
@@ -344,6 +352,56 @@ public struct InboxReadResult: Codable, Sendable, Hashable {
 /// Whether ``InboxResource/delete(_:)`` removed the comment or our reply on the platform.
 public struct InboxDeleteResult: Codable, Sendable, Hashable {
   public let deleted: Bool?
+}
+
+/// One X post as X reports it, read with a connected account's token.
+public struct XPost: Codable, Sendable, Hashable {
+  public let id: String
+  public let text: String?
+  public let permalink: String?
+  public let authorName: String?
+  public let authorHandle: String?
+  public let authorAvatarURL: String?
+  public let authorFollowers: Int?
+  /// The thread's root post.
+  public let conversationID: String?
+  /// The post this one replied to.
+  public let parentExternalID: String?
+  public let likes: Int?
+  public let replies: Int?
+  public let reposts: Int?
+  public let quotes: Int?
+  public let platformCreatedAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+    case id, text, permalink, likes, replies, reposts, quotes
+    case authorName = "author_name"
+    case authorHandle = "author_handle"
+    case authorAvatarURL = "author_avatar_url"
+    case authorFollowers = "author_followers"
+    case conversationID = "conversation_id"
+    case parentExternalID = "parent_external_id"
+    case platformCreatedAt = "platform_created_at"
+  }
+}
+
+/// One page of ``InboxResource/searchXPosts(q:accountID:maxResults:nextToken:)``.
+/// Pass `nextToken` back to read the page after this one; nil means the last.
+public struct XSearchPage: Codable, Sendable, Hashable {
+  /// The cursor X hands out for the next page.
+  public struct Meta: Codable, Sendable, Hashable {
+    public let nextToken: String?
+
+    enum CodingKeys: String, CodingKey {
+      case nextToken = "next_token"
+    }
+  }
+
+  public let data: [XPost]
+  public let meta: Meta?
+
+  /// The cursor for the page after this one, or nil on the last page.
+  public var nextToken: String? { meta?.nextToken }
 }
 
 /// The answer to ``InboxResource/unreadCount(workspaceID:)``.
