@@ -62,6 +62,8 @@ public final class FoPostClient: Sendable {
 
   /// Posts, publishing, deliveries, and bulk operations.
   public var posts: PostsResource { PostsResource(transport: transport) }
+  /// The posting queue: recurring slots a post can be dropped into.
+  public var queue: QueueResource { QueueResource(transport: transport) }
   /// Workspaces, the tenant boundary every other resource is scoped to.
   public var workspaces: WorkspacesResource { WorkspacesResource(transport: transport) }
   /// Connected social accounts.
