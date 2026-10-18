@@ -185,6 +185,7 @@ let post = try await client.posts.create(
 | `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.blog` | Blog articles for a website: settings and the website signing secret, the keyword plan, and articles from request through publish |
+| `client.blogs` | Articles and products that already live on a connected site: list the blogs, list, read, create, update and delete articles, list and update products |
 | `client.validate` | Check a post, text length, a media URL, or a subreddit against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
 | `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |

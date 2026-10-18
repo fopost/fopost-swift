@@ -77,6 +77,9 @@ public final class FoPostClient: Sendable {
 
   /// What happened in a workspace, and the security audit log.
   public var activity: ActivityResource { ActivityResource(transport: transport) }
+
+  /// Articles and products on a connected site, by the platform's own ids.
+  public var blogs: BlogsResource { BlogsResource(transport: transport) }
   /// Outbound webhooks, the push counterpart to polling a post's deliveries.
   public var webhooks: WebhooksResource { WebhooksResource(transport: transport) }
   /// The cross-account reporting surface.
