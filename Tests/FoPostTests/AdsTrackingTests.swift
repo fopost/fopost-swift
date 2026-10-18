@@ -120,8 +120,9 @@ final class AdsTrackingTests: XCTestCase {
     XCTAssertEqual(request.path, "/v1/ads/custom-conversions")
     let body = try request.bodyJSON()
     XCTAssertEqual(body["eventType"] as? String, "PURCHASE")
-    XCTAssertEqual((body["rule"] as? [String: Any])?["urlContains"] as? String, "/thanks")
-    XCTAssertNil((body["rule"] as? [String: Any])?["eventName"])
+    let rule = try XCTUnwrap(body["rule"] as? [String: Any])
+    XCTAssertEqual(rule["urlContains"] as? String, "/thanks")
+    XCTAssertFalse(rule.keys.contains("eventName"))
 
     try await client.ads.deleteCustomConversion(
       "cc_1", workspaceID: "ws_1", connectionID: "conn_1", adAccountID: "act_1")
