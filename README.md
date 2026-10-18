@@ -292,9 +292,10 @@ if envelope.event == .articlePublished {
 
 Every inbox, knowledge, contacts, broadcasts and sequences call needs an API key with the `inbox` scope, and `broadcasts.send`, `broadcasts.cancel`, `sequences.enroll` and `sequences.unenroll` need `publish` as well — except `contacts.conversationAnalytics`, which reads under `analytics`. Every ads call needs the
 `ads` scope. The inbox calls that act on the platform as the account,
-`editComment`, `like`, `unlike`, `pin`, `unpin`, `react`, `startConversation`,
-`setTyping`, `handover`, a reply with `mediaIDs` or `quickReplies`, and deleting our own
-reply, also need `publish`. The ads calls that spend money, `boost`, `create`,
+`editComment`, `like`, `unlike`, `repost`, `unrepost`, `bookmark`, `unbookmark`, `pin`,
+`unpin`, `react`, `startConversation`, `setTyping`, `handover`, a reply with `mediaIDs` or
+`quickReplies`, and deleting our own reply, also need `publish`, as do
+`accounts.followXUser` and `accounts.unfollowXUser`. The ads calls that spend money, `boost`, `create`,
 `setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
 duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
 created starts paused unless `paused` is `false`.
@@ -314,6 +315,33 @@ let ad = try await client.ads.boost(
         targeting: AdTargeting(countries: ["US", "CA"], ageMin: 21, ageMax: 45)))
 _ = try await client.ads.setStatus(ad.id, workspaceID: workspace.id, status: .active)
 ```
+
+### X engagement
+
+Repost and bookmark apply to X items where `canRepost` and `canBookmark` are true; `reposted` and
+`bookmarked` report the account's own state. `followXUser` takes the numeric X user id. `xPost`
+and `searchXPosts` read X through the connected account named by `accountID`, under the `inbox`
+scope; search pages by `nextToken`, nil on the last page.
+
+```swift
+for item in unread.data where item.platform == .twitter && item.canRepost == true {
+    try await client.inbox.repost(item.id)
+}
+_ = try await client.accounts.followXUser(account.id, userID: "2244994945")
+
+var nextToken: String?
+repeat {
+    let page = try await client.inbox.searchXPosts(
+        q: "yourbrand -is:retweet", accountID: account.id, maxResults: 50, nextToken: nextToken)
+    for post in page.data { print(post.authorHandle ?? "", post.text ?? "") }
+    nextToken = page.nextToken
+} while nextToken != nil
+```
+
+X accounts connected before this release must be reconnected for repost, bookmark and follow: the
+grant now asks for bookmark and follow permissions, and an older token answers `409
+reconnect_required`. Every one of these calls is an X API call metered to the workspace, and a
+spent X balance answers `402 platform_balance_spent`.
 
 ## Contacts
 
