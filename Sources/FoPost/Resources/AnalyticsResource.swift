@@ -51,6 +51,20 @@ public struct AnalyticsResource: Resource {
     return try await httpGet("/analytics/demographics", query: query, as: Demographics.self)
   }
 
+  /// What arrived in the inbox, what was answered, and how fast. `days`
+  /// sets the window; `timeZone` is the zone the heatmap is bucketed in.
+  public func inbox(
+    accountID: String? = nil, workspaceID: String? = nil, days: Int? = nil,
+    timeZone: String? = nil
+  ) async throws -> InboxAnalytics {
+    var query = Query()
+    query.add("account_id", accountID)
+    query.add("workspace_id", workspaceID)
+    query.add("days", days)
+    query.add("tz", timeZone)
+    return try await httpGet("/analytics/inbox", query: query, as: InboxAnalytics.self)
+  }
+
   /// Pulls fresh numbers from the platforms. Throttled harder than the read
   /// endpoints, since every call reaches out to a network.
   @discardableResult

@@ -63,6 +63,36 @@ public struct AutomationsResource: Resource {
       "/automations/\(escapePath(id))/trigger", body: payload, as: TriggerResult.self)
   }
 
+  /// An automation's saved versions, newest first, with what each one
+  /// changed. Nil page or perPage leaves the API's defaults in place.
+  public func versions(_ id: String, page: Int? = nil, perPage: Int? = nil) async throws
+    -> AutomationVersionList
+  {
+    var query = Query()
+    query.add("page", page)
+    query.add("per_page", perPage)
+    return try await httpGet(
+      "/automations/\(escapePath(id))/versions", query: query, unwrap: false,
+      as: AutomationVersionList.self)
+  }
+
+  /// One saved version, with its graph.
+  public func version(_ id: String, _ version: Int) async throws -> AutomationVersion {
+    try await httpGet(
+      "/automations/\(escapePath(id))/versions/\(version)", as: AutomationVersion.self)
+  }
+
+  /// Makes an older version the current one. The restore is saved as a new
+  /// version, so nothing is lost.
+  @discardableResult
+  public func restoreVersion(_ id: String, _ version: Int) async throws
+    -> RestoredAutomationVersion
+  {
+    try await httpPost(
+      "/automations/\(escapePath(id))/versions/\(version)/restore",
+      as: RestoredAutomationVersion.self)
+  }
+
   /// Automation counts and recent runs.
   public func stats() async throws -> AutomationStats {
     try await httpGet("/automations/stats", as: AutomationStats.self)

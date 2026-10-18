@@ -504,3 +504,101 @@ public struct NativePostsParams: Sendable {
     return query
   }
 }
+
+/// Message counts over the window, plus the median first-reply time.
+public struct InboxAnalyticsTotals: Codable, Sendable, Hashable {
+  public let received: Int?
+  public let sent: Int?
+  public let answered: Int?
+  public let open: Int?
+  public let conversations: Int?
+  public let medianResponseMinutes: Double?
+
+  enum CodingKeys: String, CodingKey {
+    case received, sent, answered, open, conversations
+    case medianResponseMinutes = "median_response_minutes"
+  }
+}
+
+/// Change against the previous window, as a fraction; `nil` with no baseline.
+public struct InboxAnalyticsDeltas: Codable, Sendable, Hashable {
+  public let received: Double?
+  public let sent: Double?
+  public let answered: Double?
+}
+
+/// One day of inbox volume.
+public struct InboxAnalyticsPoint: Codable, Sendable, Hashable {
+  /// `YYYY-MM-DD`.
+  public let date: String?
+  public let received: Int?
+  public let sent: Int?
+  public let answered: Int?
+}
+
+/// Volume on one network.
+public struct InboxAnalyticsPlatform: Codable, Sendable, Hashable {
+  public let platform: String?
+  public let received: Int?
+  public let sent: Int?
+}
+
+/// How many items of one kind arrived.
+public struct InboxAnalyticsType: Codable, Sendable, Hashable {
+  /// `comment`, `mention`, `reply`, `dm` or `review`.
+  public let type: String?
+  public let count: Int?
+}
+
+/// Volume on one account.
+public struct InboxAnalyticsAccount: Codable, Sendable, Hashable {
+  public let accountID: String?
+  public let platform: String?
+  public let username: String?
+  public let name: String?
+  public let avatar: String?
+  public let received: Int?
+  public let sent: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case platform, username, name, avatar, received, sent
+    case accountID = "account_id"
+  }
+}
+
+/// How many replies landed inside one response-time band.
+public struct InboxAnalyticsResponseBucket: Codable, Sendable, Hashable {
+  /// `under_1h`, `1h_6h`, `6h_24h`, `1d_3d` or `over_3d`.
+  public let bucket: String?
+  public let count: Int?
+}
+
+/// Arrivals in one weekday-and-hour cell, in the requested zone.
+public struct InboxAnalyticsHeatmapCell: Codable, Sendable, Hashable {
+  /// 0 is Sunday, 6 is Saturday.
+  public let weekday: Int?
+  public let hour: Int?
+  public let count: Int?
+}
+
+/// The inbox roll-up: what arrived, what was answered, and how fast.
+public struct InboxAnalytics: Codable, Sendable, Hashable {
+  public let totals: InboxAnalyticsTotals?
+  public let deltas: InboxAnalyticsDeltas?
+  public let series: [InboxAnalyticsPoint]?
+  public let byPlatform: [InboxAnalyticsPlatform]?
+  public let byType: [InboxAnalyticsType]?
+  public let byAccount: [InboxAnalyticsAccount]?
+  public let responseTime: [InboxAnalyticsResponseBucket]?
+  public let heatmap: [InboxAnalyticsHeatmapCell]?
+  public let timeZone: String?
+
+  enum CodingKeys: String, CodingKey {
+    case totals, deltas, series, heatmap
+    case byPlatform = "by_platform"
+    case byType = "by_type"
+    case byAccount = "by_account"
+    case responseTime = "response_time"
+    case timeZone = "time_zone"
+  }
+}

@@ -47,6 +47,7 @@ public struct AdsResource: Resource {
 
   /// Starts an ad connection on one network. The caller finishes the login at
   /// the returned URL in their own browser.
+  /// Wraps the API's `authorizeMetaAds` operation.
   public func authorize(_ provider: String, _ body: ConnectMetaAdsRequest) async throws
     -> MetaAdsAuthorization
   {

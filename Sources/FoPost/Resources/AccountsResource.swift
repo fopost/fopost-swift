@@ -295,11 +295,13 @@ public struct AccountsResource: Resource {
   /// Text channels the bot can post to in the connected server. A 409
   /// `webhook_connection` means the account posts through a webhook; upgrade it
   /// to the bot first. The same applies to every other Discord call here.
+  /// Wraps the API's `listDiscordChannels` operation.
   public func discordChannels(_ id: String) async throws -> [DiscordChannel] {
     try await httpGet(discordPath(id, "/channels"), as: [DiscordChannel].self)
   }
 
   /// Moves the account to another channel in the same server.
+  /// Wraps the API's `switchDiscordChannel` operation.
   public func switchDiscordChannel(_ id: String, channelID: String) async throws -> DiscordChannel {
     try await httpPatch(
       discordPath(id, "/channels/current"),
@@ -307,6 +309,7 @@ public struct AccountsResource: Resource {
   }
 
   /// The nickname and avatar the bot wears in the server.
+  /// Wraps the API's `getDiscordIdentity` operation.
   public func discordIdentity(_ id: String) async throws -> DiscordIdentity {
     try await httpGet(discordPath(id, "/identity"), as: DiscordIdentity.self)
   }
@@ -319,11 +322,13 @@ public struct AccountsResource: Resource {
   }
 
   /// Pinned messages in the account's channel.
+  /// Wraps the API's `listDiscordPins` operation.
   public func discordPins(_ id: String) async throws -> [DiscordMessage] {
     try await httpGet(discordPath(id, "/messages/pinned"), as: [DiscordMessage].self)
   }
 
   /// Removes a message from the account's channel.
+  /// Wraps the API's `deleteDiscordMessage` operation.
   @discardableResult
   public func deleteDiscordMessage(_ id: String, messageID: String) async throws -> DiscordAck {
     try await httpDelete(
@@ -362,6 +367,7 @@ public struct AccountsResource: Resource {
   }
 
   /// Sends one message to a member of the server.
+  /// Wraps the API's `sendDiscordDm` operation.
   public func sendDiscordDirectMessage(_ id: String, memberID: String, content: String)
     async throws -> DiscordMessageRef
   {
@@ -372,17 +378,20 @@ public struct AccountsResource: Resource {
   }
 
   /// The server's scheduled events.
+  /// Wraps the API's `listDiscordEvents` operation.
   public func discordEvents(_ id: String) async throws -> [DiscordScheduledEvent] {
     try await httpGet(discordPath(id, "/events"), as: [DiscordScheduledEvent].self)
   }
 
   /// One scheduled event.
+  /// Wraps the API's `getDiscordEvent` operation.
   public func discordEvent(_ id: String, eventID: String) async throws -> DiscordScheduledEvent {
     try await httpGet(
       discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordScheduledEvent.self)
   }
 
   /// Adds an event to the server's calendar.
+  /// Wraps the API's `createDiscordEvent` operation.
   public func createDiscordEvent(_ id: String, _ body: DiscordEventRequest) async throws
     -> DiscordScheduledEvent
   {
@@ -390,6 +399,7 @@ public struct AccountsResource: Resource {
   }
 
   /// Changes a scheduled event; a `nil` field is left as it is.
+  /// Wraps the API's `updateDiscordEvent` operation.
   public func updateDiscordEvent(_ id: String, eventID: String, _ body: DiscordEventRequest)
     async throws -> DiscordScheduledEvent
   {
@@ -399,12 +409,14 @@ public struct AccountsResource: Resource {
   }
 
   /// Removes a scheduled event.
+  /// Wraps the API's `deleteDiscordEvent` operation.
   @discardableResult
   public func deleteDiscordEvent(_ id: String, eventID: String) async throws -> DiscordAck {
     try await httpDelete(discordPath(id, "/events/\(escapePath(eventID))"), as: DiscordAck.self)
   }
 
   /// The server's roster, or the members whose name starts with `query`.
+  /// Wraps the API's `listDiscordMembers` operation.
   public func discordMembers(_ id: String, query: String? = nil, limit: Int? = nil) async throws
     -> [DiscordMember]
   {
@@ -415,17 +427,20 @@ public struct AccountsResource: Resource {
   }
 
   /// One member of the server.
+  /// Wraps the API's `getDiscordMember` operation.
   public func discordMember(_ id: String, memberID: String) async throws -> DiscordMember {
     try await httpGet(
       discordPath(id, "/members/\(escapePath(memberID))"), as: DiscordMember.self)
   }
 
   /// The server's roles, highest first.
+  /// Wraps the API's `listDiscordRoles` operation.
   public func discordRoles(_ id: String) async throws -> [DiscordRole] {
     try await httpGet(discordPath(id, "/roles"), as: [DiscordRole].self)
   }
 
   /// Adds a role to the server.
+  /// Wraps the API's `createDiscordRole` operation.
   public func createDiscordRole(_ id: String, _ body: DiscordRoleRequest) async throws
     -> DiscordRole
   {
@@ -433,6 +448,7 @@ public struct AccountsResource: Resource {
   }
 
   /// Changes a role on the server; a `nil` field is left as it is.
+  /// Wraps the API's `updateDiscordRole` operation.
   public func updateDiscordRole(_ id: String, roleID: String, _ body: DiscordRoleRequest)
     async throws -> DiscordRole
   {
@@ -441,6 +457,7 @@ public struct AccountsResource: Resource {
   }
 
   /// Removes a role from the server.
+  /// Wraps the API's `deleteDiscordRole` operation.
   @discardableResult
   public func deleteDiscordRole(_ id: String, roleID: String) async throws -> DiscordAck {
     try await httpDelete(discordPath(id, "/roles/\(escapePath(roleID))"), as: DiscordAck.self)

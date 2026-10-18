@@ -15,6 +15,22 @@
   `ConversionsAccepted` now also carries `id`, `eventCount` and `replayed`;
   `accepted` is unchanged.
 
+## 0.4.0 - 2026-10-18
+
+- Added: `client.queue`, the posting queue: `listSlots`, `createSlot`,
+  `updateSlot`, `deleteSlot`, `next` and `preview`. `CreatePostRequest` and
+  `UpdatePostRequest` take `schedule: "queue"` to drop a post into the next
+  free slot.
+- Added: `client.connectSessions` (`create`, `get`) for hosted connect links.
+- Added: `posts.unpublish(_:)` takes a published post down from every platform
+  that supports removal; `PostStatus.unpublished`.
+- Added: `webhooks.deliveries(_:status:limit:)`, `webhooks.delivery(_:deliveryID:)`
+  and `webhooks.redeliver(_:deliveryID:)`.
+- Added: `automations.versions(_:page:perPage:)`, `automations.version(_:_:)`
+  and `automations.restoreVersion(_:_:)`.
+- Added: `client.logs.list(_:)`, the request log with its window totals.
+- Added: `analytics.inbox(accountID:workspaceID:days:timeZone:)`.
+
 ## 0.3.0 - 2026-10-18
 
 - Changed: the blog resource follows the live wire format: `workspace_id` on

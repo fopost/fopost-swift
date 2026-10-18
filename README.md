@@ -16,7 +16,7 @@ Add the package to `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/fopost/fopost-swift.git", from: "0.3.0")
+    .package(url: "https://github.com/fopost/fopost-swift.git", from: "0.4.0")
 ]
 ```
 
@@ -168,15 +168,17 @@ let post = try await client.posts.create(
 
 | Namespace | Covers |
 | --- | --- |
-| `client.posts` | List, create, update (both with files attached), publish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
+| `client.posts` | List, create, update (both with files attached), publish, unpublish, cancel, retry, preflight, deliveries, publish runs, per-post analytics, bulk actions, CSV import |
+| `client.queue` | The posting queue: slots per workspace or account, the next free time, and a preview of the ones after it |
 | `client.workspaces` | Workspaces and their follower/post roll-up |
 | `client.accounts` | Connected accounts, rename, move between workspaces, health, validation, token refresh, history, Telegram connect codes and bot commands, Slack channels, members and posting identity, Meta messaging settings and the webhook subscription, per-network metrics, Reddit subreddits, rules, flairs and the default subreddit |
+| `client.connectSessions` | Hosted connect links: a one-time page where your own users connect an account into your workspace |
 | `client.accountGroups` | Named sets of accounts a post can target with `accountGroupID` |
 | `client.communities` | The X communities an account can post into |
 | `client.labels` | Campaign labels |
-| `client.webhooks` | Outbound event subscriptions |
-| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost |
-| `client.automations` | Automations, runs, stats, manual triggers |
+| `client.webhooks` | Outbound event subscriptions, their delivery log, and redelivery |
+| `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost, the inbox roll-up |
+| `client.automations` | Automations, runs, stats, manual triggers, saved versions and restore |
 | `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
@@ -188,6 +190,7 @@ let post = try await client.posts.create(
 | `client.blogs` | Articles and products that already live on a connected site: list the blogs, list, read, create, update and delete articles, list and update products |
 | `client.validate` | Check a post, text length, a media URL, or a subreddit against platform rules without creating anything |
 | `client.activity` | What happened in a workspace, and the security audit log |
+| `client.logs` | The request log: every API call made with the account's keys, with totals for the window |
 | `client.googleBusiness` | Manage a connected Google Business Profile location: the profile, attributes, food menus, services, photos, place action links, verification, performance and search keywords |
 | `client.whatsapp` | Templates, flows, groups, blocking, commerce and the profile on a WhatsApp Business number |
 
