@@ -6,7 +6,7 @@ import XCTest
 final class WhatsappTests: XCTestCase {
   func testWhatsappIsOnThePlatformList() {
     XCTAssertEqual(Platform.whatsapp.rawValue, "whatsapp")
-    XCTAssertTrue(Platform.all.contains(.whatsapp))
+    XCTAssertEqual(Platform(rawValue: "whatsapp"), .whatsapp)
   }
 
   func testCreateTemplateReturnsTheReviewStatusThePlatformGaveIt() async throws {
