@@ -133,4 +133,29 @@ final class PlatformExtrasTests: XCTestCase {
     XCTAssertEqual(StubURLProtocol.requests[0].query["q"], "devtestco")
     XCTAssertEqual(mentions.first?.annotation, "@[Devtestco](urn:li:organization:2414183)")
   }
+
+  func testXFollowAndUnfollowSendTheNumericUserID() async throws {
+    let client = try makeStubClient()
+
+    StubURLProtocol.script([
+      .json(#"{"data":{"account_id":"acc_1","user_id":"2244994945","following":true}}"#)
+    ])
+    let followed = try await client.accounts.followXUser("acc_1", userID: "2244994945")
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/accounts/acc_1/x/follow")
+    XCTAssertEqual(try request.bodyJSON()["user_id"] as? String, "2244994945")
+    XCTAssertEqual(followed.accountID, "acc_1")
+    XCTAssertEqual(followed.userID, "2244994945")
+    XCTAssertTrue(followed.following)
+
+    StubURLProtocol.script([
+      .json(#"{"data":{"account_id":"acc_1","user_id":"2244994945","following":false}}"#)
+    ])
+    let unfollowed = try await client.accounts.unfollowXUser("acc_1", userID: "2244994945")
+    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.path, "/v1/accounts/acc_1/x/unfollow")
+    XCTAssertEqual(try request.bodyJSON()["user_id"] as? String, "2244994945")
+    XCTAssertFalse(unfollowed.following)
+  }
 }

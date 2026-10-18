@@ -275,3 +275,26 @@ public struct LinkedInMention: Codable, Sendable, Hashable {
     case logoURL = "logo_url"
   }
 }
+
+/// Whether the X account follows a user after
+/// ``AccountsResource/followXUser(_:userID:)`` or ``AccountsResource/unfollowXUser(_:userID:)``.
+public struct XFollowResult: Codable, Sendable, Hashable {
+  public let accountID: String
+  /// The numeric X user id that was followed or unfollowed.
+  public let userID: String
+  public let following: Bool
+
+  enum CodingKeys: String, CodingKey {
+    case accountID = "account_id"
+    case userID = "user_id"
+    case following
+  }
+}
+
+struct XFollowRequest: Encodable, Sendable {
+  let userID: String
+
+  enum CodingKeys: String, CodingKey {
+    case userID = "user_id"
+  }
+}
