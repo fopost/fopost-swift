@@ -1682,39 +1682,90 @@ public struct AdCommentsParams: Sendable {
   }
 }
 
+/// Where a conversion happened.
+public struct ConversionActionSource: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let website: Self = "website"
+  public static let app: Self = "app"
+  public static let email: Self = "email"
+  public static let phoneCall: Self = "phone_call"
+  public static let chat: Self = "chat"
+  public static let physicalStore: Self = "physical_store"
+  public static let systemGenerated: Self = "system_generated"
+  public static let businessMessaging: Self = "business_messaging"
+  public static let other: Self = "other"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [
+    .website, .app, .email, .phoneCall, .chat, .physicalStore, .systemGenerated,
+    .businessMessaging, .other,
+  ]
+}
+
 /// One offline conversion. Identifiers are hashed by the API before anything
-/// leaves FoPost.
+/// leaves FoPost; the ip and user agent are sent as-is and never stored.
 public struct ConversionEvent: Codable, Sendable {
   public var eventName: String
   /// ISO 8601.
   public var occurredAt: String
+  /// Your own id, so the network deduplicates a browser and server pair.
+  public var eventId: String?
+  /// `website` when omitted.
+  public var actionSource: ConversionActionSource?
+  /// The page the event fired on.
+  public var sourceUrl: String?
   public var email: String?
   public var phone: String?
+  /// Your own user id.
+  public var externalId: String?
+  public var clientIpAddress: String?
+  public var clientUserAgent: String?
+  /// The network's click id (`fbc`).
+  public var clickId: String?
+  /// The network's browser id (`fbp`).
+  public var browserId: String?
   /// Account currency, minor units.
   public var valueMinor: Int?
   public var currency: String?
   public var orderId: String?
+  public var contentIds: [String]?
 
   public init(
-    eventName: String, occurredAt: String, email: String? = nil, phone: String? = nil,
-    valueMinor: Int? = nil, currency: String? = nil, orderId: String? = nil
+    eventName: String, occurredAt: String, eventId: String? = nil,
+    actionSource: ConversionActionSource? = nil, sourceUrl: String? = nil, email: String? = nil,
+    phone: String? = nil, externalId: String? = nil, clientIpAddress: String? = nil,
+    clientUserAgent: String? = nil, clickId: String? = nil, browserId: String? = nil,
+    valueMinor: Int? = nil, currency: String? = nil, orderId: String? = nil,
+    contentIds: [String]? = nil
   ) {
     self.eventName = eventName
     self.occurredAt = occurredAt
+    self.eventId = eventId
+    self.actionSource = actionSource
+    self.sourceUrl = sourceUrl
     self.email = email
     self.phone = phone
+    self.externalId = externalId
+    self.clientIpAddress = clientIpAddress
+    self.clientUserAgent = clientUserAgent
+    self.clickId = clickId
+    self.browserId = browserId
     self.valueMinor = valueMinor
     self.currency = currency
     self.orderId = orderId
+    self.contentIds = contentIds
   }
 }
 
-/// The body of ``AdsResource/uploadConversions(_:)``.
+/// The body of ``AdsResource/uploadConversions(_:idempotencyKey:)`` and
+/// ``AdsResource/sendPixelConversions(_:idempotencyKey:)``.
 public struct UploadConversionsRequest: Codable, Sendable {
   public var workspaceId: String
   public var connectionId: String
   public var adAccountId: String
-  /// A pixel the ad account owns, from ``AdsResource/audiences(_:)``.
+  /// A pixel the ad account owns, from ``AdsResource/pixels(connectionID:adAccountID:workspaceID:)``.
   public var pixelId: String
   /// Up to 1000 per call.
   public var events: [ConversionEvent]
@@ -1731,9 +1782,263 @@ public struct UploadConversionsRequest: Codable, Sendable {
   }
 }
 
-/// How many events the network accepted.
+/// The stored batch and how many events the network accepted.
 public struct ConversionsAccepted: Codable, Sendable {
+  /// The stored batch, readable through ``AdsResource/conversionBatches(workspaceID:connectionID:limit:)``.
+  public var id: String?
+  /// How many events the network received.
   public var accepted: Int
+  public var eventCount: Int?
+  /// True when the `Idempotency-Key` had been used before and nothing was sent.
+  public var replayed: Bool?
+}
+
+/// One stored conversion upload, with its events as hashes.
+public struct ConversionBatch: Codable, Sendable, Hashable {
+  public let id: String
+  public let workspaceId: String?
+  public let connectionId: String?
+  public let adAccountId: String?
+  public let pixelId: String?
+  public let idempotencyKey: String?
+  public let eventCount: Int?
+  public let accepted: Int?
+  public let events: [HashedConversionEvent]?
+  public let createdAt: String?
+}
+
+/// A stored event. Identifiers are kept only as hashes.
+public struct HashedConversionEvent: Codable, Sendable, Hashable {
+  public let eventName: String
+  public let occurredAt: String?
+  public let eventId: String?
+  public let actionSource: ConversionActionSource?
+  public let emailHash: String?
+  public let phoneHash: String?
+  public let externalIdHash: String?
+  public let valueMinor: Int?
+  public let currency: String?
+  public let orderId: String?
+}
+
+/// A pixel on an ad account.
+public struct AdPixel: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+}
+
+/// How a pixel's data may be used.
+public struct PixelDataUseSetting: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let advertisingAndAnalytics: Self = "advertising_and_analytics"
+  public static let analyticsOnly: Self = "analytics_only"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [.advertisingAndAnalytics, .analyticsOnly]
+}
+
+/// One pixel with its install script and settings.
+public struct AdPixelDetail: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  /// The script to place on the site.
+  public let code: String?
+  public let createdAt: String?
+  public let lastFiredAt: String?
+  public let isUnavailable: Bool?
+  public let dataUseSetting: PixelDataUseSetting?
+}
+
+/// The body of ``AdsResource/createPixel(_:)``.
+public struct CreatePixelRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var name: String
+
+  public init(workspaceId: String, connectionId: String, adAccountId: String, name: String) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.name = name
+  }
+}
+
+/// The body of ``AdsResource/updatePixel(_:_:)``.
+public struct UpdatePixelRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var name: String?
+  public var dataUseSetting: PixelDataUseSetting?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, name: String? = nil,
+    dataUseSetting: PixelDataUseSetting? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.name = name
+    self.dataUseSetting = dataUseSetting
+  }
+}
+
+struct SharePixelRequest: Codable, Sendable {
+  var workspaceId: String
+  var connectionId: String
+  var adAccountId: String
+  var targetAdAccountId: String
+}
+
+/// What a pixel recorded over the last 28 days.
+public struct AdPixelStats: Codable, Sendable, Hashable {
+  public let since: String?
+  public let until: String?
+  public let events: [PixelEventCount]?
+}
+
+/// One event name and how often it fired.
+public struct PixelEventCount: Codable, Sendable, Hashable {
+  public let eventName: String
+  public let count: Int?
+}
+
+/// How well one event's identifiers match people, as the network scores it.
+public struct EventMatchQuality: Codable, Sendable, Hashable {
+  public let eventName: String
+  /// Out of 10.
+  public let score: Double?
+  public let matchKeys: [MatchKeyCoverage]?
+}
+
+/// How often one identifier was present on an event.
+public struct MatchKeyCoverage: Codable, Sendable, Hashable {
+  public let identifier: String
+  public let coveragePercent: Double?
+}
+
+/// The standard event a custom conversion counts as.
+public struct CustomConversionEventType: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let addPaymentInfo: Self = "ADD_PAYMENT_INFO"
+  public static let addToCart: Self = "ADD_TO_CART"
+  public static let addToWishlist: Self = "ADD_TO_WISHLIST"
+  public static let completeRegistration: Self = "COMPLETE_REGISTRATION"
+  public static let contentView: Self = "CONTENT_VIEW"
+  public static let initiatedCheckout: Self = "INITIATED_CHECKOUT"
+  public static let lead: Self = "LEAD"
+  public static let purchase: Self = "PURCHASE"
+  public static let search: Self = "SEARCH"
+  public static let contact: Self = "CONTACT"
+  public static let customizeProduct: Self = "CUSTOMIZE_PRODUCT"
+  public static let donate: Self = "DONATE"
+  public static let findLocation: Self = "FIND_LOCATION"
+  public static let schedule: Self = "SCHEDULE"
+  public static let startTrial: Self = "START_TRIAL"
+  public static let submitApplication: Self = "SUBMIT_APPLICATION"
+  public static let subscribe: Self = "SUBSCRIBE"
+  public static let other: Self = "OTHER"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [
+    .addPaymentInfo, .addToCart, .addToWishlist, .completeRegistration, .contentView,
+    .initiatedCheckout, .lead, .purchase, .search, .contact, .customizeProduct, .donate,
+    .findLocation, .schedule, .startTrial, .submitApplication, .subscribe, .other,
+  ]
+}
+
+/// Which pixel events a custom conversion counts. Pick one of `urlContains`
+/// and `urlEquals`.
+public struct CustomConversionRule: Codable, Sendable, Hashable {
+  /// The pixel event the rule reads; `PageView` when omitted.
+  public var eventName: String?
+  public var urlContains: String?
+  public var urlEquals: String?
+
+  public init(eventName: String? = nil, urlContains: String? = nil, urlEquals: String? = nil) {
+    self.eventName = eventName
+    self.urlContains = urlContains
+    self.urlEquals = urlEquals
+  }
+}
+
+/// A custom conversion on an ad account.
+public struct CustomConversion: Codable, Sendable, Hashable {
+  public let id: String
+  public let name: String?
+  public let pixelId: String?
+  public let eventType: CustomConversionEventType?
+  public let rule: CustomConversionRule?
+  public let description: String?
+  /// Account currency, minor units.
+  public let defaultValueMinor: Int?
+  public let isArchived: Bool?
+  public let isUnavailable: Bool?
+  public let createdAt: String?
+  public let lastFiredAt: String?
+}
+
+/// The body of ``AdsResource/createCustomConversion(_:)``.
+public struct CreateCustomConversionRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var pixelId: String
+  public var name: String
+  public var eventType: CustomConversionEventType
+  public var rule: CustomConversionRule
+  public var description: String?
+  /// Account currency, minor units.
+  public var defaultValueMinor: Int?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, pixelId: String,
+    name: String, eventType: CustomConversionEventType, rule: CustomConversionRule,
+    description: String? = nil, defaultValueMinor: Int? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.pixelId = pixelId
+    self.name = name
+    self.eventType = eventType
+    self.rule = rule
+    self.description = description
+    self.defaultValueMinor = defaultValueMinor
+  }
+}
+
+/// The body of ``AdsResource/updateCustomConversion(_:_:)``.
+public struct UpdateCustomConversionRequest: Codable, Sendable {
+  public var workspaceId: String
+  public var connectionId: String
+  public var adAccountId: String
+  public var name: String?
+  public var description: String?
+  public var defaultValueMinor: Int?
+
+  public init(
+    workspaceId: String, connectionId: String, adAccountId: String, name: String? = nil,
+    description: String? = nil, defaultValueMinor: Int? = nil
+  ) {
+    self.workspaceId = workspaceId
+    self.connectionId = connectionId
+    self.adAccountId = adAccountId
+    self.name = name
+    self.description = description
+    self.defaultValueMinor = defaultValueMinor
+  }
+}
+
+struct AdAccountScopeRequest: Codable, Sendable {
+  var workspaceId: String
+  var connectionId: String
+  var adAccountId: String
 }
 
 /// The reply's id on the network.

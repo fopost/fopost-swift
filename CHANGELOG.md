@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Added: ads tracking under the `ads` scope. Pixels: `ads.pixels`, `createPixel`,
+  `pixel` (with the install `code`), `updatePixel`, `sharePixel`, `pixelStats`
+  and `eventMatchQuality`. Custom conversions: `customConversions`,
+  `createCustomConversion`, `customConversion`, `updateCustomConversion` and
+  `deleteCustomConversion`. Conversions API: `sendPixelConversions(_:idempotencyKey:)`
+  sends the required `Idempotency-Key` header, and `conversionBatches` lists the
+  stored uploads with hashed events.
+- Changed: `uploadConversions` takes an optional `idempotencyKey`, and
+  `ConversionEvent` gained `eventId`, `actionSource`, `sourceUrl`, `externalId`,
+  `clientIpAddress`, `clientUserAgent`, `clickId`, `browserId` and `contentIds`.
+  `ConversionsAccepted` now also carries `id`, `eventCount` and `replayed`;
+  `accepted` is unchanged.
+
 ## 0.4.0 - 2026-10-18
 
 - Added: `client.queue`, the posting queue: `listSlots`, `createSlot`,
