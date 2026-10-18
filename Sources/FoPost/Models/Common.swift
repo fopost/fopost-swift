@@ -149,10 +149,12 @@ public struct PostStatus: FoPostStringEnum {
   public static let partiallyFailed: Self = "partially_failed"
   public static let failed: Self = "failed"
   public static let cancelled: Self = "cancelled"
+  public static let unpublished: Self = "unpublished"
 
   /// Every value the SDK knows about at this version.
   public static let known: [Self] = [
     .draft, .scheduled, .publishing, .published, .partiallyFailed, .failed, .cancelled,
+    .unpublished,
   ]
 }
 

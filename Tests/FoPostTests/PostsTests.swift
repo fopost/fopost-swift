@@ -141,4 +141,27 @@ final class PostsTests: XCTestCase {
     let body = try XCTUnwrap(StubURLProtocol.requests.first).bodyJSON()
     XCTAssertEqual(body["account_group_id"] as? String, "grp_1")
   }
+
+  func testUnpublishPostsAndReadsTheRemovedDeliveries() async throws {
+    StubURLProtocol.script([
+      .json(
+        """
+        {"data":{"post_status":"unpublished","deliveries":[
+         {"account_id":"acc_1","platform":"linkedin","removed":true},
+         {"account_id":"acc_2","platform":"tiktok","removed":false}]}}
+        """)
+    ])
+    let client = try makeStubClient()
+
+    let result = try await client.posts.unpublish("post_1")
+
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/posts/post_1/unpublish")
+    XCTAssertEqual(result.postStatus, .unpublished)
+    XCTAssertEqual(result.deliveries?.count, 2)
+    XCTAssertEqual(result.deliveries?[0].accountID, "acc_1")
+    XCTAssertEqual(result.deliveries?[0].removed, true)
+    XCTAssertEqual(result.deliveries?[1].removed, false)
+  }
 }
