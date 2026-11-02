@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Removed
+
+- Removed: `client.blog` and its models (`BlogArticle*`, `BlogKeyword*`, `BlogSettings*`,
+  `BlogWebsite*`), retired with the API's `/v1/blog` endpoints, and the
+  `WebhookEvent.articlePublished` event. `client.blogs` (articles on a connected site) is unchanged.
+
 - Added: ads tracking under the `ads` scope. Pixels: `ads.pixels`, `createPixel`,
   `pixel` (with the install `code`), `updatePixel`, `sharePixel`, `pixelStats`
   and `eventMatchQuality`. Custom conversions: `customConversions`,
