@@ -9,14 +9,14 @@ final class WebhookSignatureTests: XCTestCase {
 
   private let body = Data(
     """
-    {"event":"article.published","timestamp":"2026-10-09T08:00:00.000Z",
-     "data":{"id":"art_1","title":"Best time to post","slug":"best-time-to-post",
-      "excerpt":null,"metaTitle":null,"metaDescription":null,
-      "bodyMarkdown":"# Best time","bodyHtml":"<h1>Best time</h1>",
-      "featuredImage":{"mediaId":"med_1","url":"https://cdn.yourbrand.com/a.jpg","alt":"Clock"},
-      "images":[],"tags":["scheduling"],"keyword":"best time to post","wordCount":1200,
-      "publishedAt":"2026-10-09T08:00:00.000Z","publishedUrl":"https://yourbrand.com/blog/best-time-to-post"}}
+    {"event":"post.published","timestamp":"2026-10-09T08:00:00.000Z",
+     "data":{"id":"post_1","status":"published"}}
     """.utf8)
+
+  private struct PublishedPost: Decodable {
+    let id: String
+    let status: String
+  }
 
   private func timestampedHeaders(at seconds: Int, for body: Data) -> [String: String] {
     [
@@ -26,18 +26,17 @@ final class WebhookSignatureTests: XCTestCase {
     ]
   }
 
-  func testAValidTimestampedSignaturePassesAndParsesTheArticle() throws {
+  func testAValidTimestampedSignaturePassesAndParsesTheBody() throws {
     let seconds = Int(now.timeIntervalSince1970) - 30
     let envelope = try FoPostWebhook.verify(
       rawBody: body, headers: timestampedHeaders(at: seconds, for: body), secret: secret,
       now: now)
 
-    XCTAssertEqual(envelope.event, .articlePublished)
+    XCTAssertEqual(envelope.event, .postPublished)
     XCTAssertEqual(envelope.timestamp, Timestamps.parse("2026-10-09T08:00:00.000Z"))
-    let article: BlogArticleWebhookPayload = try envelope.decodeData()
-    XCTAssertEqual(article.id, "art_1")
-    XCTAssertEqual(article.featuredImage?.mediaID, "med_1")
-    XCTAssertEqual(article.publishedUrl, "https://yourbrand.com/blog/best-time-to-post")
+    let post: PublishedPost = try envelope.decodeData()
+    XCTAssertEqual(post.id, "post_1")
+    XCTAssertEqual(post.status, "published")
   }
 
   func testATamperedBodyFails() {
@@ -68,7 +67,7 @@ final class WebhookSignatureTests: XCTestCase {
     let headers = ["X-FoPost-Signature": FoPostWebhook.sign(body, secret: secret)]
     let envelope = try FoPostWebhook.verify(
       rawBody: body, headers: headers, secret: secret, now: now)
-    XCTAssertEqual(envelope.event, .articlePublished)
+    XCTAssertEqual(envelope.event, .postPublished)
   }
 
   func testTheBodyOnlySignatureIsIgnoredOnceATimestampIsPresent() {

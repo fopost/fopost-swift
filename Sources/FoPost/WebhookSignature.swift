@@ -8,8 +8,7 @@ public struct WebhookEnvelope: Decodable, Sendable, Hashable {
   public let data: JSONValue
   public let timestamp: Date?
 
-  /// The event body as a typed model, e.g. ``BlogArticleWebhookPayload`` for
-  /// `article.published`.
+  /// The event body as a typed model.
   public func decodeData<T: Decodable>(as type: T.Type = T.self) throws -> T {
     let raw = try Coding.encoder.encode(data)
     return try Coding.decoder.decode(T.self, from: raw)
@@ -35,8 +34,8 @@ public enum WebhookVerificationError: Error, Sendable, Hashable {
 ///
 /// ```swift
 /// let envelope = try FoPostWebhook.verify(rawBody: body, headers: headers, secret: secret)
-/// if envelope.event == .articlePublished {
-///   let article: BlogArticleWebhookPayload = try envelope.decodeData()
+/// if envelope.event == .postPublished {
+///   let post: Post = try envelope.decodeData()
 /// }
 /// ```
 public enum FoPostWebhook {
