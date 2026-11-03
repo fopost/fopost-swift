@@ -20,18 +20,21 @@ final class InboxTests: XCTestCase {
 
     let page = try await client.inbox.list(
       InboxListParams(
-        workspaceID: "ws_1", type: .comment, state: .unread, accountID: "acc_1",
-        postExternalID: "ext_9", sort: .unanswered, page: 1, perPage: 20))
+        workspaceID: "ws_1", type: .comment, accountIDs: ["acc_1", "acc_2"],
+        status: .unanswered, since: Timestamps.parse("2026-09-01T00:00:00.000Z"),
+        postExternalID: "ext_9", sort: .oldest, page: 1, perPage: 20))
 
     let request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.method, "GET")
     XCTAssertEqual(request.path, "/v1/inbox")
     XCTAssertEqual(request.query["workspace_id"], "ws_1")
     XCTAssertEqual(request.query["type"], "comment")
-    XCTAssertEqual(request.query["state"], "unread")
-    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(request.query["account_id"], "acc_1,acc_2")
+    XCTAssertEqual(request.query["status"], "unanswered")
+    XCTAssertEqual(request.query["since"], "2026-09-01T00:00:00Z")
+    XCTAssertNil(request.query["state"])
     XCTAssertEqual(request.query["post_external_id"], "ext_9")
-    XCTAssertEqual(request.query["sort"], "unanswered")
+    XCTAssertEqual(request.query["sort"], "oldest")
     XCTAssertEqual(request.query["per_page"], "20")
 
     XCTAssertEqual(page.data.first?.id, "item_1")
@@ -142,6 +145,26 @@ final class InboxTests: XCTestCase {
     XCTAssertEqual(StubURLProtocol.requests.first?.path, "/v1/inbox/unread-count")
   }
 
+  func testResolveSendsTheBulkBody() async throws {
+    let client = try makeStubClient()
+    StubURLProtocol.script([.json(#"{"data":{"resolved":7}}"#)])
+
+    let result = try await client.inbox.resolve(
+      ResolveInboxRequest(
+        workspaceID: "ws_1", type: .comment, accountIDs: ["acc_1", "acc_2"],
+        before: Timestamps.parse("2026-10-01T00:00:00.000Z")))
+
+    XCTAssertEqual(result.resolved, 7)
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
+    XCTAssertEqual(request.method, "POST")
+    XCTAssertEqual(request.path, "/v1/inbox/resolve")
+    let body = try request.bodyJSON()
+    XCTAssertEqual(body["workspace_id"] as? String, "ws_1")
+    XCTAssertEqual(body["type"] as? String, "comment")
+    XCTAssertEqual(body["account_id"] as? [String], ["acc_1", "acc_2"])
+    XCTAssertEqual(body["before"] as? String, "2026-10-01T00:00:00Z")
+  }
+
   func testThreadsAndConversationsHitTheirPaths() async throws {
     let client = try makeStubClient()
 
@@ -151,12 +174,13 @@ final class InboxTests: XCTestCase {
       )
     ])
     let threads = try await client.inbox.threads(
-      InboxThreadListParams(workspaceID: "ws_1", kind: .mentions))
+      InboxThreadListParams(workspaceID: "ws_1", kind: .mentions, status: .replied))
     XCTAssertEqual(threads.data.first?.commentCount, 4)
     XCTAssertFalse(threads.hasMore)
     var request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.path, "/v1/inbox/posts")
     XCTAssertEqual(request.query["kind"], "mentions")
+    XCTAssertEqual(request.query["status"], "replied")
 
     StubURLProtocol.script([
       .json(
@@ -164,11 +188,12 @@ final class InboxTests: XCTestCase {
       )
     ])
     let conversations = try await client.inbox.conversations(
-      InboxConversationListParams(workspaceID: "ws_1", state: .unread))
+      InboxConversationListParams(workspaceID: "ws_1", accountIDs: ["acc_1"], status: .resolved))
     XCTAssertEqual(conversations.data.first?.participant?.name, "Jordan Vale")
     request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.path, "/v1/inbox/conversations")
-    XCTAssertEqual(request.query["state"], "unread")
+    XCTAssertEqual(request.query["account_id"], "acc_1")
+    XCTAssertEqual(request.query["status"], "resolved")
 
     StubURLProtocol.script([
       .json(#"{"data":[{"platform":"instagram","comments":"live","dms":"none"}]}"#)
