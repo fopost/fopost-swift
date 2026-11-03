@@ -48,10 +48,23 @@ public struct InboxSort: FoPostStringEnum {
 
   public static let newest: Self = "newest"
   public static let oldest: Self = "oldest"
-  public static let unanswered: Self = "unanswered"
 
   /// Every value the SDK knows about at this version.
-  public static let known: [Self] = [.newest, .oldest, .unanswered]
+  public static let known: [Self] = [.newest, .oldest]
+}
+
+/// The reply buckets an inbox list can filter on. A reply also resolves an
+/// item, so the three never overlap.
+public struct InboxStatus: FoPostStringEnum {
+  public let rawValue: String
+  public init(rawValue: String) { self.rawValue = rawValue }
+
+  public static let unanswered: Self = "unanswered"
+  public static let replied: Self = "replied"
+  public static let resolved: Self = "resolved"
+
+  /// Every value the SDK knows about at this version.
+  public static let known: [Self] = [.unanswered, .replied, .resolved]
 }
 
 /// Which threads ``InboxResource/threads(_:)`` groups.
@@ -414,36 +427,35 @@ public struct UnreadCount: Codable, Sendable, Hashable {
 public struct InboxListParams: Sendable {
   public var workspaceID: String?
   public var type: InboxItemType?
-  public var state: InboxItemState?
-  public var platform: Platform?
-  public var accountID: String?
+  /// One or more connected accounts.
+  public var accountIDs: [String]?
+  public var status: InboxStatus?
+  /// Only items the platform dates at or after this.
+  public var since: Date?
   public var postID: String?
   public var postExternalID: String?
   public var conversationID: String?
   public var direction: InboxDirection?
-  /// Full-text match against message text and author.
-  public var q: String?
   public var sort: InboxSort?
   public var page: Int?
   public var perPage: Int?
 
   public init(
-    workspaceID: String? = nil, type: InboxItemType? = nil, state: InboxItemState? = nil,
-    platform: Platform? = nil, accountID: String? = nil, postID: String? = nil,
+    workspaceID: String? = nil, type: InboxItemType? = nil, accountIDs: [String]? = nil,
+    status: InboxStatus? = nil, since: Date? = nil, postID: String? = nil,
     postExternalID: String? = nil, conversationID: String? = nil,
-    direction: InboxDirection? = nil, q: String? = nil, sort: InboxSort? = nil,
-    page: Int? = nil, perPage: Int? = nil
+    direction: InboxDirection? = nil, sort: InboxSort? = nil, page: Int? = nil,
+    perPage: Int? = nil
   ) {
     self.workspaceID = workspaceID
     self.type = type
-    self.state = state
-    self.platform = platform
-    self.accountID = accountID
+    self.accountIDs = accountIDs
+    self.status = status
+    self.since = since
     self.postID = postID
     self.postExternalID = postExternalID
     self.conversationID = conversationID
     self.direction = direction
-    self.q = q
     self.sort = sort
     self.page = page
     self.perPage = perPage
@@ -453,14 +465,13 @@ public struct InboxListParams: Sendable {
     var query = Query()
     query.add("workspace_id", workspaceID)
     query.add("type", type?.rawValue)
-    query.add("state", state?.rawValue)
-    query.add("platform", platform?.rawValue)
-    query.add("account_id", accountID)
+    query.add("account_id", accountIDs)
+    query.add("status", status?.rawValue)
+    query.add("since", since)
     query.add("post_id", postID)
     query.add("post_external_id", postExternalID)
     query.add("conversation_id", conversationID)
     query.add("direction", direction?.rawValue)
-    query.add("q", q)
     query.add("sort", sort?.rawValue)
     query.add("page", page)
     query.add("per_page", perPage)
@@ -473,25 +484,25 @@ public struct InboxListParams: Sendable {
 public struct InboxThreadListParams: Sendable {
   public var workspaceID: String?
   public var kind: InboxThreadKind?
-  public var platform: Platform?
-  public var accountID: String?
-  public var state: InboxItemState?
-  public var q: String?
+  /// One or more connected accounts.
+  public var accountIDs: [String]?
+  public var status: InboxStatus?
+  /// Only items the platform dates at or after this.
+  public var since: Date?
   public var sort: InboxSort?
   public var page: Int?
   public var perPage: Int?
 
   public init(
-    workspaceID: String? = nil, kind: InboxThreadKind? = nil, platform: Platform? = nil,
-    accountID: String? = nil, state: InboxItemState? = nil, q: String? = nil,
-    sort: InboxSort? = nil, page: Int? = nil, perPage: Int? = nil
+    workspaceID: String? = nil, kind: InboxThreadKind? = nil, accountIDs: [String]? = nil,
+    status: InboxStatus? = nil, since: Date? = nil, sort: InboxSort? = nil, page: Int? = nil,
+    perPage: Int? = nil
   ) {
     self.workspaceID = workspaceID
     self.kind = kind
-    self.platform = platform
-    self.accountID = accountID
-    self.state = state
-    self.q = q
+    self.accountIDs = accountIDs
+    self.status = status
+    self.since = since
     self.sort = sort
     self.page = page
     self.perPage = perPage
@@ -501,10 +512,9 @@ public struct InboxThreadListParams: Sendable {
     var query = Query()
     query.add("workspace_id", workspaceID)
     query.add("kind", kind?.rawValue)
-    query.add("platform", platform?.rawValue)
-    query.add("account_id", accountID)
-    query.add("state", state?.rawValue)
-    query.add("q", q)
+    query.add("account_id", accountIDs)
+    query.add("status", status?.rawValue)
+    query.add("since", since)
     query.add("sort", sort?.rawValue)
     query.add("page", page)
     query.add("per_page", perPage)
@@ -515,24 +525,23 @@ public struct InboxThreadListParams: Sendable {
 /// Filters and paginates ``InboxResource/conversations(_:)``.
 public struct InboxConversationListParams: Sendable {
   public var workspaceID: String?
-  public var platform: Platform?
-  public var accountID: String?
-  public var state: InboxItemState?
-  public var q: String?
+  /// One or more connected accounts.
+  public var accountIDs: [String]?
+  public var status: InboxStatus?
+  /// Only items the platform dates at or after this.
+  public var since: Date?
   public var sort: InboxSort?
   public var page: Int?
   public var perPage: Int?
 
   public init(
-    workspaceID: String? = nil, platform: Platform? = nil, accountID: String? = nil,
-    state: InboxItemState? = nil, q: String? = nil, sort: InboxSort? = nil,
-    page: Int? = nil, perPage: Int? = nil
+    workspaceID: String? = nil, accountIDs: [String]? = nil, status: InboxStatus? = nil,
+    since: Date? = nil, sort: InboxSort? = nil, page: Int? = nil, perPage: Int? = nil
   ) {
     self.workspaceID = workspaceID
-    self.platform = platform
-    self.accountID = accountID
-    self.state = state
-    self.q = q
+    self.accountIDs = accountIDs
+    self.status = status
+    self.since = since
     self.sort = sort
     self.page = page
     self.perPage = perPage
@@ -541,15 +550,45 @@ public struct InboxConversationListParams: Sendable {
   var query: Query {
     var query = Query()
     query.add("workspace_id", workspaceID)
-    query.add("platform", platform?.rawValue)
-    query.add("account_id", accountID)
-    query.add("state", state?.rawValue)
-    query.add("q", q)
+    query.add("account_id", accountIDs)
+    query.add("status", status?.rawValue)
+    query.add("since", since)
     query.add("sort", sort?.rawValue)
     query.add("page", page)
     query.add("per_page", perPage)
     return query
   }
+}
+
+/// The body of ``InboxResource/resolve(_:)``. Resolves every unanswered item
+/// of `type`, optionally only on `accountIDs` and only items dated before
+/// `before`.
+public struct ResolveInboxRequest: Codable, Sendable {
+  public var workspaceID: String
+  public var type: InboxItemType
+  public var accountIDs: [String]?
+  public var before: Date?
+
+  public init(
+    workspaceID: String, type: InboxItemType, accountIDs: [String]? = nil, before: Date? = nil
+  ) {
+    self.workspaceID = workspaceID
+    self.type = type
+    self.accountIDs = accountIDs
+    self.before = before
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case workspaceID = "workspace_id"
+    case type
+    case accountIDs = "account_id"
+    case before
+  }
+}
+
+/// The answer to ``InboxResource/resolve(_:)``.
+public struct InboxResolveResult: Codable, Sendable, Hashable {
+  public let resolved: Int
 }
 
 /// The body of ``InboxResource/markThreadRead(_:)``. Name the thread by its

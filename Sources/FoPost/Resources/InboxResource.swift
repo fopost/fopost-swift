@@ -55,6 +55,13 @@ public struct InboxResource: Resource {
     try await httpPost("/inbox/read", body: body, as: InboxReadResult.self)
   }
 
+  /// Resolves every unanswered item of one type in bulk. Nothing reaches a
+  /// platform.
+  @discardableResult
+  public func resolve(_ body: ResolveInboxRequest) async throws -> InboxResolveResult {
+    try await httpPost("/inbox/resolve", body: body, as: InboxResolveResult.self)
+  }
+
   /// Polls every inbox-capable account in the workspace now.
   public func refresh(workspaceID: String) async throws -> InboxRefreshResult {
     try await httpPost(
