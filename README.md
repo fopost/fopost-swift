@@ -180,7 +180,7 @@ let post = try await client.posts.create(
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost, the inbox roll-up |
 | `client.automations` | Automations, runs, stats, manual triggers, saved versions and restore |
 | `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
-| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
+| `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, bulk resolve, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
@@ -283,10 +283,16 @@ created starts paused unless `paused` is `false`.
 
 ```swift
 let unread = try await client.inbox.list(
-    InboxListParams(workspaceID: workspace.id, state: .unread, sort: .unanswered))
+    InboxListParams(workspaceID: workspace.id, status: .unanswered, sort: .newest))
 for item in unread.data where item.canReply == true {
     try await client.inbox.reply(item.id, text: "Thanks for the note!")
 }
+
+// Clear every unanswered comment older than a week in one call.
+try await client.inbox.resolve(
+    ResolveInboxRequest(
+        workspaceID: workspace.id, type: .comment,
+        before: Date().addingTimeInterval(-7 * 24 * 60 * 60)))
 
 let ad = try await client.ads.boost(
     BoostPostRequest(

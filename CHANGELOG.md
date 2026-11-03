@@ -7,6 +7,12 @@
 - Removed: `client.blog` and its models (`BlogArticle*`, `BlogKeyword*`, `BlogSettings*`,
   `BlogWebsite*`), retired with the API's `/v1/blog` endpoints, and the
   `WebhookEvent.articlePublished` event. `client.blogs` (articles on a connected site) is unchanged.
+- Removed: `platform`, `state` and `q` from `InboxListParams`, `InboxThreadListParams` and
+  `InboxConversationListParams`, and `InboxSort.unanswered`, matching the inbox list API.
+- Changed: the inbox list params take `accountIDs: [String]?` (sent comma-separated) in place of
+  `accountID`, plus `status` (`InboxStatus`: `.unanswered`, `.replied`, `.resolved`) and `since`.
+- Added: `inbox.resolve(_:)` with `ResolveInboxRequest`, which resolves every unanswered item of one
+  type, optionally only on some accounts and only items dated before a cutoff.
 
 - Added: ads tracking under the `ads` scope. Pixels: `ads.pixels`, `createPixel`,
   `pixel` (with the install `code`), `updatePixel`, `sharePixel`, `pixelStats`
