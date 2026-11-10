@@ -66,5 +66,19 @@ final class MultipartTests: XCTestCase {
     XCTAssertTrue(body.contains(#"name="workspace_id""#))
     XCTAssertTrue(body.contains(#"name="file"; filename="posts.csv""#))
     XCTAssertTrue(body.contains("Content-Type: text/csv"))
+    XCTAssertFalse(body.contains(#"name="accounts""#))
+  }
+
+  func testBulkImportSendsDefaultAccountsWhenGiven() async throws {
+    StubURLProtocol.script([
+      .json(#"{"batch_id":"b1","created":1,"held_for_approval":false,"posts":[]}"#)
+    ])
+    let client = try makeStubClient()
+
+    _ = try await client.posts.commitBulkImport(
+      workspaceID: "ws_1", csv: Data("content\nHello\n".utf8), accounts: ["twitter", "linkedin"])
+
+    let body = try XCTUnwrap(StubURLProtocol.requests.first).bodyString
+    XCTAssertTrue(body.contains("name=\"accounts\"\r\n\r\ntwitter,linkedin"))
   }
 }

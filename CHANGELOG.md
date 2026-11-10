@@ -26,6 +26,9 @@
   `clientIpAddress`, `clientUserAgent`, `clickId`, `browserId` and `contentIds`.
   `ConversionsAccepted` now also carries `id`, `eventCount` and `replayed`;
   `accepted` is unchanged.
+- Added: `posts.validateBulkImport` and `posts.commitBulkImport` take an optional
+  `accounts: [String]?` (account ids or platform names), sent comma-separated and applied to
+  every CSV row whose own `accounts` cell is empty.
 
 ## 0.4.0 - 2026-10-18
 
