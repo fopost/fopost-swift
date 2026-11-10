@@ -264,23 +264,23 @@ public struct PostsResource: Resource {
 
   // MARK: - Bulk import
 
-  /// Checks a CSV without creating anything.
-  public func validateBulkImport(workspaceID: String, filename: String = "posts.csv", csv: Data)
-    async throws -> BulkImportValidation
-  {
+  /// Checks a CSV without creating anything. `accounts` (ids or platform names) applies to rows whose own accounts cell is empty.
+  public func validateBulkImport(
+    workspaceID: String, filename: String = "posts.csv", csv: Data, accounts: [String]? = nil
+  ) async throws -> BulkImportValidation {
     try await httpUpload(
       "/posts/bulk-import/validate",
-      form: csvForm(workspaceID: workspaceID, filename: filename, csv: csv),
+      form: csvForm(workspaceID: workspaceID, filename: filename, csv: csv, accounts: accounts),
       as: BulkImportValidation.self)
   }
 
-  /// Creates the posts a CSV describes.
-  public func commitBulkImport(workspaceID: String, filename: String = "posts.csv", csv: Data)
-    async throws -> BulkImportResult
-  {
+  /// Creates the posts a CSV describes. `accounts` (ids or platform names) applies to rows whose own accounts cell is empty.
+  public func commitBulkImport(
+    workspaceID: String, filename: String = "posts.csv", csv: Data, accounts: [String]? = nil
+  ) async throws -> BulkImportResult {
     try await httpUpload(
       "/posts/bulk-import/commit",
-      form: csvForm(workspaceID: workspaceID, filename: filename, csv: csv),
+      form: csvForm(workspaceID: workspaceID, filename: filename, csv: csv, accounts: accounts),
       as: BulkImportResult.self)
   }
 
@@ -290,9 +290,12 @@ public struct PostsResource: Resource {
     try await httpDelete("/posts/bulk-import/\(escapePath(batchID))", as: MessageResponse.self)
   }
 
-  private func csvForm(workspaceID: String, filename: String, csv: Data) -> MultipartForm {
+  private func csvForm(workspaceID: String, filename: String, csv: Data, accounts: [String]?)
+    -> MultipartForm
+  {
     var form = MultipartForm()
     form.addField("workspace_id", workspaceID)
+    if let accounts, !accounts.isEmpty { form.addField("accounts", accounts.joined(separator: ",")) }
     form.addFile(field: "file", filename: filename, mimeType: "text/csv", data: csv)
     return form
   }
