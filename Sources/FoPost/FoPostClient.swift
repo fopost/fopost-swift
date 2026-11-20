@@ -100,6 +100,8 @@ public final class FoPostClient: Sendable {
   public var designs: DesignsResource { DesignsResource(transport: transport) }
   /// The font library and a workspace's uploaded fonts.
   public var fonts: FontsResource { FontsResource(transport: transport) }
+  /// Video edit jobs on library videos.
+  public var videoEdits: VideoEditsResource { VideoEditsResource(transport: transport) }
   /// Comments, mentions, and direct messages on connected accounts.
   public var inbox: InboxResource { InboxResource(transport: transport) }
 
