@@ -179,7 +179,10 @@ let post = try await client.posts.create(
 | `client.webhooks` | Outbound event subscriptions, their delivery log, and redelivery |
 | `client.analytics` | Overview, time series, top posts, posts table, labels, demographics, posting streak, on-demand collection, content decay, posting cadence, per-post timelines, a changes cursor, a single-post refresh, posts made outside FoPost, the inbox roll-up |
 | `client.automations` | Automations, runs, stats, manual triggers, saved versions and restore |
-| `client.media` | The media library, uploads, direct (presigned) uploads, and the account's upload limits |
+| `client.media` | The media library, uploads, direct (presigned) uploads, the account's upload limits, and generated alt text |
+| `client.designs` | Designs: list, create, get, update, delete, saved versions and restore, duplicate, export to images, PDF or video, bulk create from rows, the posts that use a design, text to slides, and a design from a post |
+| `client.fonts` | The font library plus a workspace's uploaded fonts: list, upload, delete |
+| `client.videoEdits` | Video edit jobs: the available operations, list, create and get |
 | `client.inbox` | Comments, mentions, and DMs: list, threads, conversations, unread count, mark read, refresh, state changes, bulk resolve, reply (with media and quick replies), comment edits, hide, like, vote, pin, react, delete, start a conversation, typing indicator, reply approvals |
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
@@ -388,6 +391,38 @@ let metrics = try await client.googleBusiness.performance(
 ```
 
 Responses relay Google's own shape as `JSONValue`. Reads need the `accounts` scope, writes `publish` as well. Every call throws a 503 `configuration_error` until Google grants the deployment Business Profile API access.
+
+## Designs, fonts and video edits
+
+These need the `posts` scope. `textToSlides`, `media.generateAltText` and any video
+operation that uses AI also need `ai`, and spend the prepaid balance.
+
+A design's `document` (its pages and layers) is passed through as
+`DesignDocument`, a `[String: JSONValue]`. An update or a restore returns a
+`DesignSaveResult`: the design plus the version it saved, if any.
+
+```swift
+let design = try await client.designs.create(
+    CreateDesignRequest(workspaceID: workspace.id, kind: .carousel, name: "Launch"))
+let saved = try await client.designs.update(
+    design.id, UpdateDesignRequest(name: "Launch week", createVersion: true))
+let export = try await client.designs.export(design.id, ExportDesignRequest(format: .png))
+print(export.files.map(\.mediaID))
+
+let font = try await client.fonts.upload(
+    workspaceID: workspace.id, fileURL: URL(fileURLWithPath: "Brand.woff2"),
+    family: "Brand Sans", weight: 700)
+
+var job = try await client.videoEdits.create(
+    CreateVideoEditRequest(
+        mediaID: video.id,
+        operations: [VideoEditOperation(op: .trim, params: ["start": 0, "end": 15])]))
+while job.status == .queued || job.status == .running {
+    try await Task.sleep(for: .seconds(2))
+    job = try await client.videoEdits.get(job.id)
+}
+print(job.resultMediaID ?? job.error ?? "")
+```
 
 ## Validation
 

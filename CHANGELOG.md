@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- Added: `client.designs`: `list`, `create`, `get`, `update` and `restoreVersion` (both return
+  `DesignSaveResult`, the design plus the saved version), `delete`, `versions`, `duplicate`,
+  `export`, `bulk`, `posts`, `textToSlides` and `fromPost`. The design document is a
+  `DesignDocument` (`[String: JSONValue]`).
+- Added: `client.fonts`: `list` (the library plus uploaded fonts), `upload` from an `UploadFile`,
+  a file URL or bytes, and `delete`.
+- Added: `client.videoEdits`: `ops`, `list`, `create` with `[VideoEditOperation]` (`op` plus
+  `params`), and `get`.
+- Added: `media.generateAltText(_:)`, which writes and saves alt text for a library image.
+
 ### Removed
 
 - Removed: `client.blog` and its models (`BlogArticle*`, `BlogKeyword*`, `BlogSettings*`,
