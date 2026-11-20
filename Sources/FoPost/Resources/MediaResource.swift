@@ -119,6 +119,12 @@ public struct MediaResource: Resource {
     return try await complete(uploadID: presigned.uploadId)
   }
 
+  /// Writes alt text for a library image and saves it on the media. Needs the
+  /// `ai` scope and spends AI balance; an empty balance is a 402.
+  public func generateAltText(_ id: String) async throws -> GeneratedAltText {
+    try await httpPost("/media/\(escapePath(id))/alt-text", as: GeneratedAltText.self)
+  }
+
   /// Removes an asset from the library.
   public func delete(_ id: String) async throws {
     try await httpDelete("/media/\(escapePath(id))")
