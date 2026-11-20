@@ -163,3 +163,17 @@ public struct UploadLimits: Codable, Sendable, Hashable {
   public let directUploadAvailable: Bool?
   public let allowedTypes: [String]?
 }
+
+/// What ``MediaResource/generateAltText(_:)`` answers. The text is also saved on the media.
+public struct GeneratedAltText: Codable, Sendable, Hashable {
+  public let altText: String
+  /// Always `ai`.
+  public let altTextSource: String?
+  public let tags: [String]?
+
+  enum CodingKeys: String, CodingKey {
+    case tags
+    case altText = "alt_text"
+    case altTextSource = "alt_text_source"
+  }
+}
