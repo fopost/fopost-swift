@@ -98,6 +98,8 @@ public final class FoPostClient: Sendable {
   public var media: MediaResource { MediaResource(transport: transport) }
   /// Designs built in the editor, their versions, and their exports.
   public var designs: DesignsResource { DesignsResource(transport: transport) }
+  /// The font library and a workspace's uploaded fonts.
+  public var fonts: FontsResource { FontsResource(transport: transport) }
   /// Comments, mentions, and direct messages on connected accounts.
   public var inbox: InboxResource { InboxResource(transport: transport) }
 
