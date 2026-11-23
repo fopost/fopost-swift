@@ -1,10 +1,9 @@
 import Foundation
 
-/// Product catalogs, reach-and-frequency predictions, the public ad archive,
-/// partnership allowlists, and the ad account's own settings. Every call needs
-/// the `ads` scope; the ones that spend or go live — creating and changing a
-/// catalog, and reserving a prediction — also need `publish`. Everything here
-/// is read live from the ad platform and never stored.
+/// Reach-and-frequency predictions, partnership allowlists, and the ad
+/// account's own settings. Every call needs the `ads` scope; reserving a
+/// prediction also needs `publish`. Everything here is read live from the ad
+/// platform and never stored.
 extension AdsResource {
 
   // MARK: - Goals
@@ -14,144 +13,6 @@ extension AdsResource {
   /// refused if you send it anyway.
   public func goals(connectionID: String, workspaceID: String? = nil) async throws -> [String] {
     try await httpGet("/ads/goals", query: adQuery(workspaceID, connectionID), as: [String].self)
-  }
-
-  // MARK: - Product catalogs
-
-  /// Catalogs the connection's business portfolios reach.
-  public func catalogs(connectionID: String, workspaceID: String? = nil) async throws
-    -> ProductCatalogsResult
-  {
-    try await httpGet(
-      "/ads/catalogs", query: adQuery(workspaceID, connectionID), as: ProductCatalogsResult.self)
-  }
-
-  /// Creates a catalog on the connection's business portfolio. Also needs `publish`.
-  public func createCatalog(_ body: CreateCatalogRequest) async throws -> ProductCatalog {
-    try await httpPost("/ads/catalogs", body: body, as: ProductCatalog.self)
-  }
-
-  /// One catalog, read live.
-  public func catalog(_ id: String, connectionID: String, workspaceID: String? = nil) async throws
-    -> ProductCatalog
-  {
-    try await httpGet(
-      "/ads/catalogs/\(escapePath(id))", query: adQuery(workspaceID, connectionID),
-      as: ProductCatalog.self)
-  }
-
-  /// Renames a catalog. Also needs `publish`.
-  public func updateCatalog(
-    _ id: String, _ body: UpdateCatalogRequest, workspaceID: String, connectionID: String
-  ) async throws -> ProductCatalog {
-    try await httpPatch(
-      "/ads/catalogs/\(escapePath(id))", body: body, query: adQuery(workspaceID, connectionID),
-      as: ProductCatalog.self)
-  }
-
-  /// Deletes the catalog with every product, feed, and set in it. Also needs `publish`.
-  @discardableResult
-  public func deleteCatalog(_ id: String, workspaceID: String, connectionID: String) async throws
-    -> MessageResponse
-  {
-    try await httpDelete(
-      "/ads/catalogs/\(escapePath(id))", query: adQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
-  }
-
-  /// One page of products; pass `nextCursor` back as `after`.
-  public func catalogProducts(
-    _ id: String, connectionID: String, workspaceID: String? = nil, after: String? = nil
-  ) async throws -> CatalogProductsPage {
-    var query = adQuery(workspaceID, connectionID)
-    query.add("after", after)
-    return try await httpGet(
-      "/ads/catalogs/\(escapePath(id))/products", query: query, as: CatalogProductsPage.self)
-  }
-
-  /// Up to 500 upserts and deletes in one batch, keyed by your own retailer id.
-  /// Also needs `publish`.
-  public func writeCatalogProducts(_ id: String, _ body: CatalogProductBatchRequest) async throws
-    -> CatalogBatchResult
-  {
-    try await httpPost(
-      "/ads/catalogs/\(escapePath(id))/products", body: body, as: CatalogBatchResult.self)
-  }
-
-  /// The feeds keeping a catalog in step with a hosted product file.
-  public func productFeeds(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> [ProductFeed]
-  {
-    try await httpGet(
-      "/ads/catalogs/\(escapePath(id))/feeds", query: adQuery(workspaceID, connectionID),
-      as: [ProductFeed].self)
-  }
-
-  /// Creates a product feed. Also needs `publish`.
-  public func createProductFeed(_ id: String, _ body: CreateProductFeedRequest) async throws
-    -> ProductFeed
-  {
-    try await httpPost("/ads/catalogs/\(escapePath(id))/feeds", body: body, as: ProductFeed.self)
-  }
-
-  /// Deletes a product feed. Also needs `publish`.
-  @discardableResult
-  public func deleteProductFeed(
-    _ id: String, feedID: String, workspaceID: String, connectionID: String
-  ) async throws -> MessageResponse {
-    try await httpDelete(
-      feedPath(id, feedID), query: adQuery(workspaceID, connectionID), as: MessageResponse.self)
-  }
-
-  /// Each run the ad platform made of the feed.
-  public func feedUploads(
-    _ id: String, feedID: String, connectionID: String, workspaceID: String? = nil
-  ) async throws -> [ProductFeedUpload] {
-    try await httpGet(
-      "\(feedPath(id, feedID))/uploads", query: adQuery(workspaceID, connectionID),
-      as: [ProductFeedUpload].self)
-  }
-
-  /// Fetches the feed now. Also needs `publish`.
-  public func startFeedUpload(_ id: String, feedID: String, _ body: StartFeedUploadRequest)
-    async throws -> StartedFeedUpload
-  {
-    try await httpPost("\(feedPath(id, feedID))/uploads", body: body, as: StartedFeedUpload.self)
-  }
-
-  /// A catalog ad runs from a product set, not the whole catalog.
-  public func productSets(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> [ProductSet]
-  {
-    try await httpGet(
-      "/ads/catalogs/\(escapePath(id))/product-sets", query: adQuery(workspaceID, connectionID),
-      as: [ProductSet].self)
-  }
-
-  /// Creates a product set. Also needs `publish`.
-  public func createProductSet(_ id: String, _ body: ProductSetRequest) async throws -> ProductSet {
-    try await httpPost(
-      "/ads/catalogs/\(escapePath(id))/product-sets", body: body, as: ProductSet.self)
-  }
-
-  /// Renames a product set. Also needs `publish`.
-  public func updateProductSet(
-    _ id: String, setID: String, _ body: ProductSetRequest, workspaceID: String,
-    connectionID: String
-  ) async throws -> ProductSet {
-    try await httpPatch(
-      productSetPath(id, setID), body: body, query: adQuery(workspaceID, connectionID),
-      as: ProductSet.self)
-  }
-
-  /// Deletes a product set. Also needs `publish`.
-  @discardableResult
-  public func deleteProductSet(
-    _ id: String, setID: String, workspaceID: String, connectionID: String
-  ) async throws -> MessageResponse {
-    try await httpDelete(
-      productSetPath(id, setID), query: adQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
   }
 
   // MARK: - Reach and frequency
@@ -198,27 +59,6 @@ extension AdsResource {
     try await httpPost(
       "/ads/reach-frequency/\(escapePath(id))/cancel", body: body,
       as: ReachFrequencyPrediction.self)
-  }
-
-  // MARK: - Ad Library
-
-  /// The public ad archive: ads anyone is running, by keyword or by Page. Read
-  /// live on every call and stored nowhere, so an ad that stops running is
-  /// simply absent from the next search. `countries` are two-letter codes the
-  /// ad reached.
-  public func library(
-    connectionID: String, countries: [String], q: String? = nil, pageIDs: [String]? = nil,
-    activeStatus: String? = nil, limit: Int? = nil, after: String? = nil,
-    workspaceID: String? = nil
-  ) async throws -> AdLibraryPage {
-    var query = adQuery(workspaceID, connectionID)
-    query.add("countries", countries.joined(separator: ","))
-    query.add("q", q)
-    if let pageIDs, !pageIDs.isEmpty { query.add("page_ids", pageIDs.joined(separator: ",")) }
-    query.add("active_status", activeStatus)
-    if let limit { query.add("limit", String(limit)) }
-    query.add("after", after)
-    return try await httpGet("/ads/library", query: query, as: AdLibraryPage.self)
   }
 
   // MARK: - Partnership ads
@@ -414,13 +254,5 @@ extension AdsResource {
     var query = adQuery(workspaceID, connectionID)
     query.add("ad_account_id", adAccountID)
     return query
-  }
-
-  private func feedPath(_ catalogID: String, _ feedID: String) -> String {
-    "/ads/catalogs/\(escapePath(catalogID))/feeds/\(escapePath(feedID))"
-  }
-
-  private func productSetPath(_ catalogID: String, _ setID: String) -> String {
-    "/ads/catalogs/\(escapePath(catalogID))/product-sets/\(escapePath(setID))"
   }
 }
