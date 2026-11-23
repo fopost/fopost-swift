@@ -16,6 +16,17 @@
 
 ### Removed
 
+- Removed: the ads methods for routes the API no longer serves. On `client.ads`:
+  `accountTree`, the campaign, ad set and network ad methods (`createCampaign`, `campaign`,
+  `updateCampaign`, `deleteCampaign`, `duplicateCampaign`, and the same for `AdSet` and
+  `NetworkAd`), the creative methods (`creatives`, `createCreative`, `creative`,
+  `deleteCreative`), the product catalog methods (catalogs, products, feeds, feed uploads,
+  product sets) and `library`, with their models. On `client.googleAds`: keywords, keyword
+  ideas and metrics, search terms, negative keyword lists, assets, asset groups,
+  recommendations and the optimization score, with their models. `AdProvider.capabilities`
+  no longer carries `creatives`, `catalogs`, `adLibrary` or `smartPlus`. Boosts, standalone
+  ads, bulk status, audiences, insights, lead forms, pixels, conversions, and the Google bid
+  strategy, ad schedule, Local Services and conversion methods are unchanged.
 - Removed: `client.blog` and its models (`BlogArticle*`, `BlogKeyword*`, `BlogSettings*`,
   `BlogWebsite*`), retired with the API's `/v1/blog` endpoints, and the
   `WebhookEvent.articlePublished` event. `client.blogs` (articles on a connected site) is unchanged.
