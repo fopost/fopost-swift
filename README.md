@@ -187,7 +187,7 @@ let post = try await client.posts.create(
 | `client.contacts` | The people behind the inbox: list, get, create, update, delete, the threads one person appears in, CSV import, and the custom fields a workspace keeps. Plus volume and reply time per thread |
 | `client.broadcasts` | One message into every conversation you already have with a segment of your contacts: list, get, create, update, delete, send, cancel, and who it reached |
 | `client.sequences` | A series of messages on a delay: list, get, create, update, delete, enroll, unenroll, and who is walking it |
-| `client.ads` | Boosts, ads, Meta Ads connections, sources, the campaign tree (campaigns, ad sets, ads, bulk status), creatives, product catalogs (products, feeds, product sets), audiences, targeting search, reach estimates, reach-and-frequency predictions, the public ad archive, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed, pixels (install code, stats, event match quality, sharing), the Conversions API (`sendPixelConversions` with a required `Idempotency-Key`, `uploadConversions`, stored batches) and custom conversions |
+| `client.ads` | Boosts, ads, Meta Ads connections, sources, bulk status, audiences, targeting search, reach estimates, reach-and-frequency predictions, partnership allowlists, ad account settings, insights, lead forms, leads and the stored leads feed, pixels (install code, stats, event match quality, sharing), the Conversions API (`sendPixelConversions` with a required `Idempotency-Key`, `uploadConversions`, stored batches) and custom conversions |
 | `client.knowledge` | The workspace knowledge base: FAQs, notes, your own pages and plain-text files, plus the search that grounds a drafted reply |
 | `client.blogs` | Articles and products that already live on a connected site: list the blogs, list, read, create, update and delete articles, list and update products |
 | `client.validate` | Check a post, text length, a media URL, or a subreddit against platform rules without creating anything |
@@ -280,8 +280,7 @@ Every inbox, knowledge, contacts, broadcasts and sequences call needs an API key
 `unpin`, `react`, `startConversation`, `setTyping`, `handover`, a reply with `mediaIDs` or
 `quickReplies`, and deleting our own reply, also need `publish`, as do
 `accounts.followXUser` and `accounts.unfollowXUser`. The ads calls that spend money, `boost`, `create`,
-`setStatus`, `delete`, `bulkSetStatus`, and every create, update, delete, and
-duplicate on campaigns, ad sets, and network ads, also need `publish`. Anything
+`setStatus`, `delete`, and `bulkSetStatus`, also need `publish`. Anything
 created starts paused unless `paused` is `false`.
 
 ```swift
@@ -594,22 +593,15 @@ MIT. See [LICENSE](LICENSE).
 
 ### Google Ads
 
-Campaigns, ad groups, ads, audiences, and insights are on `client.ads` and dispatch by
-connection. What only Google has is on `client.googleAds`:
+Ads, audiences, and insights are on `client.ads` and dispatch by connection. What only
+Google has is on `client.googleAds`:
 
 ```swift
 let scope = GoogleAdsScope(connectionId: "c4d5e6f7-…", customerId: "1234567890")
-let keywords = try await client.googleAds.keywords(scope)
-
-try await client.googleAds.createKeyword(
-  CreateGoogleKeywordRequest(
-    scope: GoogleAdsScope(
-      workspaceId: "7d2b8c11-…", connectionId: "c4d5e6f7-…", customerId: "1234567890"),
-    adGroupId: "1234567890~adGroup~77", text: "running shoes", matchType: .exact))
+let strategies = try await client.googleAds.bidStrategies(scope)
 ```
 
-Also `keywordIdeas`, `keywordMetrics`, `searchTerms`, `bidStrategies`, `adSchedule` and
-`setAdSchedule`, the negative keyword lists, `assets` and `assetGroups`,
-`localServicesLeads`, the conversion methods, and `query` for a raw read-only GAQL SELECT.
+Also `createBidStrategy`, `adSchedule` and `setAdSchedule`, `localServicesLeads`, the
+conversion methods, and `query` for a raw read-only GAQL SELECT.
 Changes need the `publish` scope as well as `ads`; `customerId` has to name an account the
 connection's grant reaches.

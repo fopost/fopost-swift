@@ -177,50 +177,8 @@ final class AdsTests: XCTestCase {
     XCTAssertEqual(request.query["after"], "xyz")
   }
 
-  func testAccountTreeNestsAdSetsAndAdsUnderCampaigns() async throws {
-    StubURLProtocol.script([
-      .json(
-        #"{"data":{"adAccountId":"act_123","currency":"USD","workspaceId":"ws_1","campaigns":[{"id":"c_1","name":"Launch","status":"ACTIVE","budgetMinor":null,"adSets":[{"id":"s_1","name":"US","campaignId":"c_1","status":"PAUSED","budgetMinor":2000,"budgetType":"daily","ads":[{"id":"a_1","name":"Morning","adSetId":"s_1","creativeId":"cr_1","status":"PAUSED"}]}]}]}}"#
-      )
-    ])
+  func testBulkSetStatusReportsEachObject() async throws {
     let client = try makeStubClient()
-
-    let tree = try await client.ads.accountTree(
-      "act_123", connectionID: "conn_1", workspaceID: "ws_1")
-
-    let request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.method, "GET")
-    XCTAssertEqual(request.path, "/v1/ads/accounts/act_123/tree")
-    XCTAssertEqual(request.query["connection_id"], "conn_1")
-    XCTAssertEqual(request.query["workspace_id"], "ws_1")
-    let campaign = try XCTUnwrap(tree.campaigns?.first)
-    XCTAssertNil(campaign.budgetMinor)
-    let adSet = try XCTUnwrap(campaign.adSets?.first)
-    XCTAssertEqual(adSet.budgetType, .daily)
-    XCTAssertEqual(adSet.ads?.first?.creativeId, "cr_1")
-  }
-
-  func testCampaignWritesCarryWorkspaceAndConnection() async throws {
-    let client = try makeStubClient()
-
-    StubURLProtocol.script([.json(#"{"data":{"id":"c_1","status":"ACTIVE"}}"#)])
-    _ = try await client.ads.updateCampaign(
-      "c_1", UpdateAdCampaignRequest(status: .active), workspaceID: "ws_1",
-      connectionID: "conn_1")
-    var request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.method, "PATCH")
-    XCTAssertEqual(request.path, "/v1/ads/campaigns/c_1")
-    XCTAssertEqual(request.query["workspace_id"], "ws_1")
-    XCTAssertEqual(request.query["connection_id"], "conn_1")
-    XCTAssertEqual(try request.bodyJSON() as NSDictionary, ["status": "active"])
-
-    StubURLProtocol.script([.json(#"{"data":{"id":"c_2"}}"#, status: 201)])
-    let copy = try await client.ads.duplicateCampaign(
-      "c_1", workspaceID: "ws_1", connectionID: "conn_1", paused: false)
-    XCTAssertEqual(copy.id, "c_2")
-    request = try XCTUnwrap(StubURLProtocol.requests.first)
-    XCTAssertEqual(request.path, "/v1/ads/campaigns/c_1/duplicate")
-    XCTAssertEqual(try request.bodyJSON()["paused"] as? Bool, false)
 
     StubURLProtocol.script([
       .json(
@@ -232,7 +190,7 @@ final class AdsTests: XCTestCase {
         workspaceId: "ws_1", connectionId: "conn_1", status: .paused,
         objects: [AdObjectRef(id: "c_1", level: .campaign), AdObjectRef(id: "a_1", level: .ad)]))
     XCTAssertEqual(results.last?.ok, false)
-    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    let request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.path, "/v1/ads/status")
     let objects = try XCTUnwrap(try request.bodyJSON()["objects"] as? [[String: Any]])
     XCTAssertEqual(objects.last?["level"] as? String, "ad")
@@ -294,29 +252,8 @@ final class AdsTests: XCTestCase {
     XCTAssertNil(second.nextCursor)
   }
 
-  func testCreativeUrlTagsAndLeadPages() async throws {
+  func testLeadPagesAndAudienceUsers() async throws {
     let client = try makeStubClient()
-
-    StubURLProtocol.script([
-      .json(
-        #"{"data":{"id":"cr_1","name":"Carousel","format":"carousel","callToAction":"SHOP_NOW","urlTags":"utm_source=meta"}}"#,
-        status: 201)
-    ])
-    let creative = try await client.ads.createCreative(
-      CreateAdCreativeRequest(
-        workspaceId: "ws_1", connectionId: "conn_1", adAccountId: "act_123", pageId: "1234",
-        name: "Carousel", format: .carousel, text: "Hi", callToAction: .shopNow,
-        urlTags: "utm_source=meta",
-        cards: [
-          AdCreativeCard(mediaUrl: "https://cdn.yourbrand.com/1.png"),
-          AdCreativeCard(mediaUrl: "https://cdn.yourbrand.com/2.png"),
-        ]))
-    XCTAssertEqual(creative.format, .carousel)
-    var request = try XCTUnwrap(StubURLProtocol.requests.first)
-    var body = try request.bodyJSON()
-    XCTAssertEqual(body["urlTags"] as? String, "utm_source=meta")
-    XCTAssertEqual(body["callToAction"] as? String, "SHOP_NOW")
-    XCTAssertEqual((body["cards"] as? [Any])?.count, 2)
 
     StubURLProtocol.script([.json(#"{"data":{"pageId":"1234","backfilled":7}}"#, status: 201)])
     let page = try await client.ads.subscribeLeadPage(
@@ -326,7 +263,7 @@ final class AdsTests: XCTestCase {
     StubURLProtocol.script([.json(#"{"message":"Unsubscribed"}"#)])
     _ = try await client.ads.unsubscribeLeadPage(
       "1234", workspaceID: "ws_1", connectionID: "conn_1")
-    request = try XCTUnwrap(StubURLProtocol.requests.first)
+    var request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.method, "DELETE")
     XCTAssertEqual(request.path, "/v1/ads/lead-pages/1234")
     XCTAssertEqual(request.query["connection_id"], "conn_1")
@@ -338,7 +275,7 @@ final class AdsTests: XCTestCase {
     XCTAssertEqual(added.added, 2)
     request = try XCTUnwrap(StubURLProtocol.requests.first)
     XCTAssertEqual(request.path, "/v1/ads/audiences/aud_1/users")
-    body = try request.bodyJSON()
+    let body = try request.bodyJSON()
     XCTAssertEqual((body["emails"] as? [String])?.count, 2)
   }
 }

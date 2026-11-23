@@ -36,7 +36,7 @@ final class AdsTikTokTests: XCTestCase {
     XCTAssertEqual(last.query["identity_id"], "idt_1")
   }
 
-  func testSparkPostIdAndSmartPlusTravelInTheBody() async throws {
+  func testSparkPostIdTravelsInTheBody() async throws {
     StubURLProtocol.script([
       .json(
         """
@@ -44,10 +44,7 @@ final class AdsTikTokTests: XCTestCase {
         "status":"paused","connectionId":"conn_1","adAccountId":"7011",
         "targeting":{"countries":["US"],"ageMin":18,"ageMax":44,"gender":"all"},
         "createdAt":"2026-09-19T10:00:00.000Z"}}
-        """, status: 201),
-      .json("""
-        {"data":{"id":"c1","name":"Smart","status":"PAUSED"}}
-        """, status: 201),
+        """, status: 201)
     ])
     let client = try makeStubClient()
 
@@ -58,12 +55,6 @@ final class AdsTikTokTests: XCTestCase {
         targeting: AdTargeting(countries: ["US"], ageMin: 18, ageMax: 44), text: "",
         sparkPostId: "item_99"))
     XCTAssertEqual(try StubURLProtocol.requests[0].bodyJSON()["sparkPostId"] as? String, "item_99")
-
-    _ = try await client.ads.createCampaign(
-      CreateAdCampaignRequest(
-        workspaceId: "ws_1", connectionId: "conn_1", adAccountId: "7011", name: "Smart",
-        goal: .traffic, smartPlus: true))
-    XCTAssertEqual(try StubURLProtocol.requests[1].bodyJSON()["smartPlus"] as? Bool, true)
   }
 
   func testConversionsReportWhatTheNetworkAccepted() async throws {

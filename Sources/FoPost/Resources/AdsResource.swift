@@ -1,13 +1,11 @@
 import Foundation
 
-/// Boosts, ads, the campaign tree, creatives, audiences, insights, and lead
-/// forms on an ad connection. Every call needs the `ads` scope; the ones
-/// that spend money (``boost(_:)``, ``create(_:)``,
-/// ``setStatus(_:workspaceID:status:)``, ``delete(_:workspaceID:)``,
-/// ``bulkSetStatus(_:)``, and every create, update, delete, and duplicate on
-/// campaigns, ad sets, and network ads) also need `publish`. Campaigns, ad
-/// sets, network ads, creatives, and audiences are addressed by Meta's id plus
-/// a connection, and are read live, never stored.
+/// Boosts, ads, audiences, insights, and lead forms on an ad connection.
+/// Every call needs the `ads` scope; the ones that spend money
+/// (``boost(_:)``, ``create(_:)``, ``setStatus(_:workspaceID:status:)``,
+/// ``delete(_:workspaceID:)``, and ``bulkSetStatus(_:)``) also need
+/// `publish`. Audiences are addressed by Meta's id plus a connection, and are
+/// read live, never stored.
 public struct AdsResource: Resource {
   let transport: Transport
 
@@ -347,181 +345,11 @@ public struct AdsResource: Resource {
       "/ads/lead-forms/\(escapePath(formID))/leads", query: params.query, as: LeadsPage.self)
   }
 
-  /// An ad account's campaigns, each with its ad sets and their ads.
-  public func accountTree(_ adAccountID: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> AdAccountTree
-  {
-    try await httpGet(
-      "/ads/accounts/\(escapePath(adAccountID))/tree",
-      query: metaQuery(workspaceID, connectionID), as: AdAccountTree.self)
-  }
-
-  /// Creates a campaign. Needs the `publish` scope as well as `ads`. It starts
-  /// paused unless `paused` is `false`.
-  public func createCampaign(_ body: CreateAdCampaignRequest) async throws -> AdCampaign {
-    try await httpPost("/ads/campaigns", body: body, as: AdCampaign.self)
-  }
-
-  /// One campaign, read live.
-  public func campaign(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> AdCampaign
-  {
-    try await httpGet(
-      "/ads/campaigns/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: AdCampaign.self)
-  }
-
-  /// Renames, pauses, or resumes a campaign. Needs the `publish` scope as well
-  /// as `ads`.
-  public func updateCampaign(
-    _ id: String, _ body: UpdateAdCampaignRequest, workspaceID: String, connectionID: String
-  ) async throws -> AdCampaign {
-    try await httpPatch(
-      "/ads/campaigns/\(escapePath(id))", body: body,
-      query: metaQuery(workspaceID, connectionID), as: AdCampaign.self)
-  }
-
-  /// Deletes a campaign on Meta. Needs the `publish` scope as well as `ads`.
-  @discardableResult
-  public func deleteCampaign(_ id: String, workspaceID: String, connectionID: String)
-    async throws -> MessageResponse
-  {
-    try await httpDelete(
-      "/ads/campaigns/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
-  }
-
-  /// Copies a campaign. Needs the `publish` scope as well as `ads`. The copy
-  /// starts paused unless `paused` is `false`.
-  public func duplicateCampaign(
-    _ id: String, workspaceID: String, connectionID: String, paused: Bool? = nil
-  ) async throws -> DuplicatedAdObject {
-    try await duplicate("/ads/campaigns/\(escapePath(id))", workspaceID, connectionID, paused)
-  }
-
-  /// Creates an ad set in a campaign. Needs the `publish` scope as well as
-  /// `ads`. It starts paused unless `paused` is `false`.
-  public func createAdSet(_ body: CreateAdSetRequest) async throws -> AdSet {
-    try await httpPost("/ads/ad-sets", body: body, as: AdSet.self)
-  }
-
-  /// One ad set, read live.
-  public func adSet(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> AdSet
-  {
-    try await httpGet(
-      "/ads/ad-sets/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: AdSet.self)
-  }
-
-  /// Changes an ad set's name, status, budget, end, or targeting. Needs the
-  /// `publish` scope as well as `ads`.
-  public func updateAdSet(
-    _ id: String, _ body: UpdateAdSetRequest, workspaceID: String, connectionID: String
-  ) async throws -> AdSet {
-    try await httpPatch(
-      "/ads/ad-sets/\(escapePath(id))", body: body, query: metaQuery(workspaceID, connectionID),
-      as: AdSet.self)
-  }
-
-  /// Deletes an ad set on Meta. Needs the `publish` scope as well as `ads`.
-  @discardableResult
-  public func deleteAdSet(_ id: String, workspaceID: String, connectionID: String)
-    async throws -> MessageResponse
-  {
-    try await httpDelete(
-      "/ads/ad-sets/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
-  }
-
-  /// Copies an ad set. Needs the `publish` scope as well as `ads`.
-  public func duplicateAdSet(
-    _ id: String, workspaceID: String, connectionID: String, paused: Bool? = nil
-  ) async throws -> DuplicatedAdObject {
-    try await duplicate("/ads/ad-sets/\(escapePath(id))", workspaceID, connectionID, paused)
-  }
-
-  /// Creates an ad inside an ad set from a creative. Needs the `publish` scope
-  /// as well as `ads`. Distinct from ``create(_:)``, which builds a whole
-  /// campaign in one call.
-  public func createNetworkAd(_ body: CreateNetworkAdRequest) async throws -> NetworkAd {
-    try await httpPost("/ads/ads", body: body, as: NetworkAd.self)
-  }
-
-  /// One ad inside an ad set, read live.
-  public func networkAd(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> NetworkAd
-  {
-    try await httpGet(
-      "/ads/ads/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: NetworkAd.self)
-  }
-
-  /// Renames, pauses, resumes, or swaps the creative of an ad. Needs the
-  /// `publish` scope as well as `ads`.
-  public func updateNetworkAd(
-    _ id: String, _ body: UpdateNetworkAdRequest, workspaceID: String, connectionID: String
-  ) async throws -> NetworkAd {
-    try await httpPatch(
-      "/ads/ads/\(escapePath(id))", body: body, query: metaQuery(workspaceID, connectionID),
-      as: NetworkAd.self)
-  }
-
-  /// Deletes an ad on Meta. Needs the `publish` scope as well as `ads`.
-  @discardableResult
-  public func deleteNetworkAd(_ id: String, workspaceID: String, connectionID: String)
-    async throws -> MessageResponse
-  {
-    try await httpDelete(
-      "/ads/ads/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
-  }
-
-  /// Copies an ad. Needs the `publish` scope as well as `ads`.
-  public func duplicateNetworkAd(
-    _ id: String, workspaceID: String, connectionID: String, paused: Bool? = nil
-  ) async throws -> DuplicatedAdObject {
-    try await duplicate("/ads/ads/\(escapePath(id))", workspaceID, connectionID, paused)
-  }
-
   /// Pauses or resumes up to 50 campaigns, ad sets, and ads at once. Each
   /// object reports its own outcome. Needs the `publish` scope as well as
   /// `ads`.
   public func bulkSetStatus(_ body: BulkAdStatusRequest) async throws -> [BulkAdStatusResult] {
     try await httpPost("/ads/status", body: body, as: [BulkAdStatusResult].self)
-  }
-
-  /// The creatives in one ad account's library.
-  public func creatives(connectionID: String, adAccountID: String, workspaceID: String? = nil)
-    async throws -> AdCreativesResult
-  {
-    var query = metaQuery(workspaceID, connectionID)
-    query.add("ad_account_id", adAccountID)
-    return try await httpGet("/ads/creatives", query: query, as: AdCreativesResult.self)
-  }
-
-  /// Builds an image, video, or carousel creative.
-  public func createCreative(_ body: CreateAdCreativeRequest) async throws -> AdCreative {
-    try await httpPost("/ads/creatives", body: body, as: AdCreative.self)
-  }
-
-  /// One creative, read live.
-  public func creative(_ id: String, connectionID: String, workspaceID: String? = nil)
-    async throws -> AdCreative
-  {
-    try await httpGet(
-      "/ads/creatives/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: AdCreative.self)
-  }
-
-  /// Deletes a creative from the library.
-  @discardableResult
-  public func deleteCreative(_ id: String, workspaceID: String, connectionID: String)
-    async throws -> MessageResponse
-  {
-    try await httpDelete(
-      "/ads/creatives/\(escapePath(id))", query: metaQuery(workspaceID, connectionID),
-      as: MessageResponse.self)
   }
 
   /// One custom audience, read live.
@@ -574,7 +402,7 @@ public struct AdsResource: Resource {
       query: metaQuery(workspaceID, connectionID), as: AddedAudienceCompanies.self)
   }
 
-  // ─── Forecasts, conversions, and the public ad library ─────────────────
+  // ─── Forecasts and conversions ─────────────────
 
   /// What the auction currently costs for that audience.
   public func bidPricing(_ body: AdForecastRequest) async throws -> BidPricing {
@@ -781,14 +609,6 @@ public struct AdsResource: Resource {
     try await httpDelete(
       "/ads/lead-pages/\(escapePath(pageID))", query: metaQuery(workspaceID, connectionID),
       as: MessageResponse.self)
-  }
-
-  private func duplicate(
-    _ path: String, _ workspaceID: String, _ connectionID: String, _ paused: Bool?
-  ) async throws -> DuplicatedAdObject {
-    try await httpPost(
-      "\(path)/duplicate", body: DuplicateAdObjectRequest(paused: paused),
-      query: metaQuery(workspaceID, connectionID), as: DuplicatedAdObject.self)
   }
 
   private func metaQuery(_ workspaceID: String?, _ connectionID: String) -> Query {

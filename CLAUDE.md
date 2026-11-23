@@ -53,8 +53,8 @@ sequences, and ads.
 `FoPostWebhook.verify` checks an inbound webhook's signature over the raw bytes. Inbox skips `/inbox/chat/*`
 (browser-encrypted X Chat) and the binary `/inbox/{id}/attachments/{index}`
 stream. Ads doc comments name the spending calls (`boost`, `create`,
-`setStatus`, `delete`, `bulkSetStatus`, and the campaign, ad set, and network ad
-writes) that need the `publish` scope on top of `ads`.
+`setStatus`, `delete`, and `bulkSetStatus`) that need the `publish` scope on top
+of `ads`.
 
 Design notes worth keeping:
 

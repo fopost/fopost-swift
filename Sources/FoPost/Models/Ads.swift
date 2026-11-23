@@ -409,8 +409,8 @@ public struct AdProvider: Codable, Sendable, Hashable {
   public let logo: String?
   public let configured: Bool?
   public let connectMethods: [String]?
-  /// What the network supports: campaigns, audiences, conversions, forecasts,
-  /// adLibrary, and so on.
+  /// What the network supports: campaigns, boost, audiences, leadForms, and so
+  /// on.
   public let capabilities: [String: Bool]?
   /// What ``AdsResource/searchTargeting(_:)`` accepts here, in picker order.
   public let targetingFacets: [String]?
@@ -951,127 +951,12 @@ public struct AdInsightsBreakdown: FoPostStringEnum {
   public static let known: [Self] = [.age, .gender, .placement, .country]
 }
 
-/// The shape of a creative.
-public struct AdCreativeFormat: FoPostStringEnum {
-  public let rawValue: String
-  public init(rawValue: String) { self.rawValue = rawValue }
-
-  public static let image: Self = "image"
-  public static let video: Self = "video"
-  public static let carousel: Self = "carousel"
-  public static let post: Self = "post"
-  public static let other: Self = "other"
-
-  /// Every value the SDK knows about at this version.
-  public static let known: [Self] = [.image, .video, .carousel, .post, .other]
-}
-
-/// The button on a creative.
-public struct AdCallToAction: FoPostStringEnum {
-  public let rawValue: String
-  public init(rawValue: String) { self.rawValue = rawValue }
-
-  public static let learnMore: Self = "LEARN_MORE"
-  public static let shopNow: Self = "SHOP_NOW"
-  public static let signUp: Self = "SIGN_UP"
-  public static let subscribe: Self = "SUBSCRIBE"
-  public static let contactUs: Self = "CONTACT_US"
-  public static let download: Self = "DOWNLOAD"
-  public static let getOffer: Self = "GET_OFFER"
-  public static let bookNow: Self = "BOOK_NOW"
-  public static let applyNow: Self = "APPLY_NOW"
-  public static let watchMore: Self = "WATCH_MORE"
-
-  /// Every value the SDK knows about at this version.
-  public static let known: [Self] = [
-    .learnMore, .shopNow, .signUp, .subscribe, .contactUs, .download, .getOffer, .bookNow,
-    .applyNow, .watchMore,
-  ]
-}
-
-/// An ad inside an ad set, by Meta's id. Read live, never stored.
-public struct NetworkAd: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let campaignId: String?
-  public let adSetId: String?
-  public let creativeId: String?
-  public let status: String?
-  public let effectiveStatus: String?
-  public let createdAt: String?
-}
-
-/// An ad set, by Meta's id. Read live, never stored.
-public struct AdSet: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let campaignId: String?
-  public let status: String?
-  public let effectiveStatus: String?
-  public let budgetMinor: Int?
-  public let budgetType: AdBudgetType?
-  public let endAt: String?
-  public let optimizationGoal: String?
-  public let createdAt: String?
-  /// Only in ``AdsResource/accountTree(_:connectionID:workspaceID:)``.
-  public let ads: [NetworkAd]?
-}
-
-/// A campaign, by Meta's id. Read live, never stored.
-public struct AdCampaign: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  /// `ACTIVE`, `PAUSED`, `DELETED` or `ARCHIVED`.
-  public let status: String?
-  public let effectiveStatus: String?
-  public let objective: String?
-  /// `nil` when the budget lives on the ad sets.
-  public let budgetMinor: Int?
-  public let budgetType: AdBudgetType?
-  public let createdAt: String?
-  /// Only in ``AdsResource/accountTree(_:connectionID:workspaceID:)``.
-  public let adSets: [AdSet]?
-}
-
-/// An ad account's campaigns, each with its ad sets and their ads.
-public struct AdAccountTree: Codable, Sendable, Hashable {
-  public let adAccountId: String?
-  public let currency: String?
-  public let workspaceId: String?
-  public let campaigns: [AdCampaign]?
-}
-
-/// The id of the copy a duplicate call made.
-public struct DuplicatedAdObject: Codable, Sendable, Hashable {
-  public let id: String?
-}
-
 /// One object's outcome in ``AdsResource/bulkSetStatus(_:)``.
 public struct BulkAdStatusResult: Codable, Sendable, Hashable {
   public let id: String
   public let level: AdObjectLevel?
   public let ok: Bool?
   public let error: String?
-}
-
-/// A creative in an ad account's library.
-public struct AdCreative: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let format: AdCreativeFormat?
-  public let status: String?
-  public let title: String?
-  public let body: String?
-  public let link: String?
-  public let thumbnailUrl: String?
-  public let callToAction: String?
-  public let urlTags: String?
-}
-
-/// The answer to ``AdsResource/creatives(connectionID:adAccountID:workspaceID:)``.
-public struct AdCreativesResult: Codable, Sendable, Hashable {
-  public let creatives: [AdCreative]?
-  public let workspaceId: String?
 }
 
 /// How many emails ``AdsResource/addAudienceUsers(_:emails:workspaceID:connectionID:)`` sent.
@@ -1176,136 +1061,6 @@ public struct SubscribedLeadPage: Codable, Sendable, Hashable {
   public let backfilled: Int?
 }
 
-/// The body of ``AdsResource/createCampaign(_:)``. The campaign starts paused
-/// unless `paused` is `false`.
-public struct CreateAdCampaignRequest: Codable, Sendable {
-  public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
-  public var connectionId: String
-  /// The ad account, `act_…`.
-  public var adAccountId: String
-  public var name: String
-  public var goal: AdGoal
-  public var paused: Bool?
-  /// Hands targeting and creative rotation to the network. Needs its
-  /// `smartPlus` capability.
-  public var smartPlus: Bool?
-
-  public init(
-    workspaceId: String, connectionId: String, adAccountId: String, name: String, goal: AdGoal,
-    paused: Bool? = nil, smartPlus: Bool? = nil
-  ) {
-    self.workspaceId = workspaceId
-    self.connectionId = connectionId
-    self.adAccountId = adAccountId
-    self.name = name
-    self.goal = goal
-    self.paused = paused
-    self.smartPlus = smartPlus
-  }
-}
-
-/// The body of ``AdsResource/updateCampaign(_:_:workspaceID:connectionID:)``.
-public struct UpdateAdCampaignRequest: Codable, Sendable {
-  public var name: String?
-  public var status: AdStatus?
-
-  public init(name: String? = nil, status: AdStatus? = nil) {
-    self.name = name
-    self.status = status
-  }
-}
-
-/// The body of ``AdsResource/createAdSet(_:)``. The ad set starts paused
-/// unless `paused` is `false`.
-public struct CreateAdSetRequest: Codable, Sendable {
-  public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
-  public var connectionId: String
-  public var campaignId: String
-  /// The Page the ads in this set run as.
-  public var pageId: String
-  public var name: String
-  public var goal: AdGoal
-  public var budget: AdBudget
-  public var targeting: AdTargeting
-  public var paused: Bool?
-
-  public init(
-    workspaceId: String, connectionId: String, campaignId: String, pageId: String, name: String,
-    goal: AdGoal, budget: AdBudget, targeting: AdTargeting, paused: Bool? = nil
-  ) {
-    self.workspaceId = workspaceId
-    self.connectionId = connectionId
-    self.campaignId = campaignId
-    self.pageId = pageId
-    self.name = name
-    self.goal = goal
-    self.budget = budget
-    self.targeting = targeting
-    self.paused = paused
-  }
-}
-
-/// The body of ``AdsResource/updateAdSet(_:_:workspaceID:connectionID:)``.
-public struct UpdateAdSetRequest: Codable, Sendable {
-  public var name: String?
-  public var status: AdStatus?
-  /// New budget in minor units; the budget type set at creation stays.
-  public var budgetMinor: Int?
-  public var endAt: Date?
-  public var targeting: AdTargeting?
-
-  public init(
-    name: String? = nil, status: AdStatus? = nil, budgetMinor: Int? = nil, endAt: Date? = nil,
-    targeting: AdTargeting? = nil
-  ) {
-    self.name = name
-    self.status = status
-    self.budgetMinor = budgetMinor
-    self.endAt = endAt
-    self.targeting = targeting
-  }
-}
-
-/// The body of ``AdsResource/createNetworkAd(_:)``. The ad starts paused
-/// unless `paused` is `false`.
-public struct CreateNetworkAdRequest: Codable, Sendable {
-  public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
-  public var connectionId: String
-  public var adSetId: String
-  /// From ``AdsResource/createCreative(_:)`` or the creative library.
-  public var creativeId: String
-  public var name: String
-  public var paused: Bool?
-
-  public init(
-    workspaceId: String, connectionId: String, adSetId: String, creativeId: String, name: String,
-    paused: Bool? = nil
-  ) {
-    self.workspaceId = workspaceId
-    self.connectionId = connectionId
-    self.adSetId = adSetId
-    self.creativeId = creativeId
-    self.name = name
-    self.paused = paused
-  }
-}
-
-/// The body of ``AdsResource/updateNetworkAd(_:_:workspaceID:connectionID:)``.
-public struct UpdateNetworkAdRequest: Codable, Sendable {
-  public var name: String?
-  public var status: AdStatus?
-  public var creativeId: String?
-
-  public init(name: String? = nil, status: AdStatus? = nil, creativeId: String? = nil) {
-    self.name = name
-    self.status = status
-    self.creativeId = creativeId
-  }
-}
-
 /// One object ``AdsResource/bulkSetStatus(_:)`` acts on.
 public struct AdObjectRef: Codable, Sendable, Hashable {
   /// Meta's id.
@@ -1334,73 +1089,6 @@ public struct BulkAdStatusRequest: Codable, Sendable {
     self.connectionId = connectionId
     self.status = status
     self.objects = objects
-  }
-}
-
-/// One card of a carousel creative.
-public struct AdCreativeCard: Codable, Sendable, Hashable {
-  /// A media library image.
-  public var mediaUrl: String
-  public var destinationUrl: String?
-  public var headline: String?
-  public var description: String?
-
-  public init(
-    mediaUrl: String, destinationUrl: String? = nil, headline: String? = nil,
-    description: String? = nil
-  ) {
-    self.mediaUrl = mediaUrl
-    self.destinationUrl = destinationUrl
-    self.headline = headline
-    self.description = description
-  }
-}
-
-/// The body of ``AdsResource/createCreative(_:)``: an image, a video (needs
-/// `mediaUrl`), or a carousel (needs `cards`).
-public struct CreateAdCreativeRequest: Codable, Sendable {
-  public var workspaceId: String
-  /// A Meta Ads connection in the workspace.
-  public var connectionId: String
-  /// The ad account, `act_…`.
-  public var adAccountId: String
-  public var pageId: String
-  public var name: String
-  public var format: AdCreativeFormat
-  /// Primary text.
-  public var text: String
-  public var headline: String?
-  public var destinationUrl: String?
-  /// Defaults to `LEARN_MORE`.
-  public var callToAction: AdCallToAction?
-  /// Query string appended to every link in the ad.
-  public var urlTags: String?
-  /// A media library asset URL: the image, or the video.
-  public var mediaUrl: String?
-  /// A video's poster frame, as a library image.
-  public var thumbnailMediaUrl: String?
-  public var cards: [AdCreativeCard]?
-
-  public init(
-    workspaceId: String, connectionId: String, adAccountId: String, pageId: String, name: String,
-    format: AdCreativeFormat, text: String, headline: String? = nil,
-    destinationUrl: String? = nil, callToAction: AdCallToAction? = nil, urlTags: String? = nil,
-    mediaUrl: String? = nil, thumbnailMediaUrl: String? = nil, cards: [AdCreativeCard]? = nil
-  ) {
-    self.workspaceId = workspaceId
-    self.connectionId = connectionId
-    self.adAccountId = adAccountId
-    self.pageId = pageId
-    self.name = name
-    self.format = format
-    self.text = text
-    self.headline = headline
-    self.destinationUrl = destinationUrl
-    self.callToAction = callToAction
-    self.urlTags = urlTags
-    self.mediaUrl = mediaUrl
-    self.thumbnailMediaUrl = thumbnailMediaUrl
-    self.cards = cards
   }
 }
 
@@ -1449,10 +1137,6 @@ public struct SubscribeLeadPageRequest: Codable, Sendable {
     self.connectionId = connectionId
     self.pageId = pageId
   }
-}
-
-struct DuplicateAdObjectRequest: Codable, Sendable {
-  var paused: Bool?
 }
 
 struct AddAudienceUsersRequest: Codable, Sendable {

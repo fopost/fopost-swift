@@ -21,13 +21,6 @@ public struct GoogleAdsScope: Codable, Sendable, Hashable {
   }
 }
 
-/// How closely a search has to match a keyword.
-public enum GoogleMatchType: String, Codable, Sendable {
-  case exact = "EXACT"
-  case phrase = "PHRASE"
-  case broad = "BROAD"
-}
-
 /// A portfolio bid strategy.
 public enum GoogleBidStrategyType: String, Codable, Sendable {
   case targetSpend = "TARGET_SPEND"
@@ -35,13 +28,6 @@ public enum GoogleBidStrategyType: String, Codable, Sendable {
   case maximizeConversionValue = "MAXIMIZE_CONVERSION_VALUE"
   case targetCpa = "TARGET_CPA"
   case targetRoas = "TARGET_ROAS"
-}
-
-/// Where an asset renders.
-public enum GoogleAssetFieldType: String, Codable, Sendable {
-  case sitelink = "SITELINK"
-  case callout = "CALLOUT"
-  case structuredSnippet = "STRUCTURED_SNIPPET"
 }
 
 /// A day of the week on an ad schedule.
@@ -62,36 +48,6 @@ public enum GoogleAdjustmentType: String, Codable, Sendable {
   case enhancement = "ENHANCEMENT"
 }
 
-/// A keyword on an ad group.
-public struct GoogleKeyword: Codable, Sendable, Hashable {
-  /// `<customerId>~keyword~<adGroupId>~<criterionId>`
-  public let id: String
-  public let adGroupId: String?
-  public let text: String?
-  public let matchType: String?
-  public let status: String?
-  /// The account's currency, in minor units.
-  public let cpcBidMinor: Int?
-  public let negative: Bool?
-}
-
-/// A keyword idea, or the historical metrics of one.
-public struct GoogleKeywordIdea: Codable, Sendable, Hashable {
-  public let text: String?
-  public let avgMonthlySearches: Int?
-  public let competition: String?
-  public let lowTopOfPageBidMinor: Int?
-  public let highTopOfPageBidMinor: Int?
-}
-
-/// What someone actually searched, with the metrics it earned.
-public struct GoogleSearchTerm: Codable, Sendable, Hashable {
-  public let term: String?
-  public let adGroupId: String?
-  public let status: String?
-  public let metrics: InsightsMetrics?
-}
-
 /// A portfolio bid strategy on the account.
 public struct GoogleBidStrategy: Codable, Sendable, Hashable {
   public let id: String
@@ -108,49 +64,6 @@ public struct GoogleAdScheduleSlot: Codable, Sendable, Hashable {
   public let startHour: Int?
   public let endHour: Int?
   public let bidModifier: Double?
-}
-
-/// A negative keyword list.
-public struct GoogleSharedSet: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let type: String?
-  public let memberCount: Int?
-}
-
-/// A sitelink, callout, or structured snippet.
-public struct GoogleAsset: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let type: String?
-  /// What a sitelink, callout, or snippet renders.
-  public let text: String?
-  public let finalUrl: String?
-}
-
-/// Where an asset is attached; one with no links serves nowhere.
-public struct GoogleAssetLink: Codable, Sendable, Hashable {
-  public let id: String
-  public let assetId: String?
-  public let level: String?
-  public let ownerId: String?
-  public let fieldType: String?
-  public let status: String?
-}
-
-/// The account's assets with the links that place them.
-public struct GoogleAssets: Codable, Sendable, Hashable {
-  public let assets: [GoogleAsset]?
-  public let links: [GoogleAssetLink]?
-}
-
-/// A Performance Max asset group.
-public struct GoogleAssetGroup: Codable, Sendable, Hashable {
-  public let id: String
-  public let campaignId: String?
-  public let name: String?
-  public let status: String?
-  public let finalUrls: [String]?
 }
 
 /// A lead from Local Services Ads, read live and never stored.
@@ -192,11 +105,6 @@ public struct GoogleUploaded: Codable, Sendable, Hashable {
   public let uploaded: Int?
 }
 
-/// How many keywords a negative list took.
-public struct GoogleAdded: Codable, Sendable, Hashable {
-  public let added: Int?
-}
-
 /// How many slots a schedule now has.
 public struct GoogleSlots: Codable, Sendable, Hashable {
   public let slots: Int?
@@ -213,88 +121,6 @@ public struct ConnectGoogleAdsRequest: Codable, Sendable {
   public init(workspaceId: String, returnTo: String? = nil) {
     self.workspaceId = workspaceId
     self.returnTo = returnTo
-  }
-}
-
-/// Add a keyword to an ad group.
-public struct CreateGoogleKeywordRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var adGroupId: String
-  public var text: String
-  public var matchType: GoogleMatchType
-  /// The account's currency, in minor units.
-  public var cpcBidMinor: Int?
-
-  public init(
-    scope: GoogleAdsScope, adGroupId: String, text: String, matchType: GoogleMatchType,
-    cpcBidMinor: Int? = nil
-  ) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.adGroupId = adGroupId
-    self.text = text
-    self.matchType = matchType
-    self.cpcBidMinor = cpcBidMinor
-  }
-}
-
-/// Pause, resume, or rebid a keyword.
-public struct UpdateGoogleKeywordRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  /// `active` or `paused`.
-  public var status: String?
-  public var cpcBidMinor: Int?
-
-  public init(scope: GoogleAdsScope, status: String? = nil, cpcBidMinor: Int? = nil) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.status = status
-    self.cpcBidMinor = cpcBidMinor
-  }
-}
-
-/// Ask for keyword ideas from seeds, a landing page, or both.
-public struct GoogleKeywordIdeasRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var seeds: [String]?
-  public var url: String?
-  public var languageId: String?
-  public var geoTargetIds: [String]?
-
-  public init(
-    scope: GoogleAdsScope, seeds: [String]? = nil, url: String? = nil, languageId: String? = nil,
-    geoTargetIds: [String]? = nil
-  ) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.seeds = seeds
-    self.url = url
-    self.languageId = languageId
-    self.geoTargetIds = geoTargetIds
-  }
-}
-
-/// Read the historical metrics of keywords you already have.
-public struct GoogleKeywordMetricsRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var keywords: [String]
-
-  public init(scope: GoogleAdsScope, keywords: [String]) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.keywords = keywords
   }
 }
 
@@ -350,178 +176,6 @@ public struct SetGoogleAdScheduleRequest: Codable, Sendable {
     self.customerId = scope.customerId
     self.campaignId = campaignId
     self.slots = slots
-  }
-}
-
-/// Create a negative keyword list.
-public struct CreateGoogleNegativeKeywordListRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var name: String
-
-  public init(scope: GoogleAdsScope, name: String) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.name = name
-  }
-}
-
-/// One keyword in a negative list.
-public struct GoogleNegativeKeyword: Codable, Sendable, Hashable {
-  public var text: String
-  public var matchType: GoogleMatchType
-
-  public init(text: String, matchType: GoogleMatchType) {
-    self.text = text
-    self.matchType = matchType
-  }
-}
-
-/// Add keywords to a negative list.
-public struct AddGoogleNegativeKeywordsRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var sharedSetId: String
-  public var keywords: [GoogleNegativeKeyword]
-
-  public init(scope: GoogleAdsScope, sharedSetId: String, keywords: [GoogleNegativeKeyword]) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.sharedSetId = sharedSetId
-    self.keywords = keywords
-  }
-}
-
-/// Put a negative keyword list on a campaign.
-public struct AttachGoogleNegativeKeywordListRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var sharedSetId: String
-  public var campaignId: String
-
-  public init(scope: GoogleAdsScope, sharedSetId: String, campaignId: String) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.sharedSetId = sharedSetId
-    self.campaignId = campaignId
-  }
-}
-
-/// The asset to create.
-public struct GoogleAssetSpec: Codable, Sendable, Hashable {
-  /// `sitelink`, `callout`, or `snippet`.
-  public var kind: String
-  public var text: String?
-  public var description1: String?
-  public var description2: String?
-  public var finalUrl: String?
-  public var header: String?
-  public var values: [String]?
-
-  public static func sitelink(
-    text: String, finalUrl: String, description1: String? = nil, description2: String? = nil
-  ) -> GoogleAssetSpec {
-    GoogleAssetSpec(
-      kind: "sitelink", text: text, description1: description1, description2: description2,
-      finalUrl: finalUrl, header: nil, values: nil)
-  }
-
-  public static func callout(text: String) -> GoogleAssetSpec {
-    GoogleAssetSpec(
-      kind: "callout", text: text, description1: nil, description2: nil, finalUrl: nil,
-      header: nil, values: nil)
-  }
-
-  public static func snippet(header: String, values: [String]) -> GoogleAssetSpec {
-    GoogleAssetSpec(
-      kind: "snippet", text: nil, description1: nil, description2: nil, finalUrl: nil,
-      header: header, values: values)
-  }
-}
-
-/// Add an asset to the library.
-public struct CreateGoogleAssetRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var spec: GoogleAssetSpec
-
-  public init(scope: GoogleAdsScope, spec: GoogleAssetSpec) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.spec = spec
-  }
-}
-
-/// Attach an asset to the account, or to one campaign.
-public struct AttachGoogleAssetRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var assetId: String
-  public var fieldType: GoogleAssetFieldType
-  /// Attaches to the account when left out.
-  public var campaignId: String?
-
-  public init(
-    scope: GoogleAdsScope, assetId: String, fieldType: GoogleAssetFieldType,
-    campaignId: String? = nil
-  ) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.assetId = assetId
-    self.fieldType = fieldType
-    self.campaignId = campaignId
-  }
-}
-
-/// Create a Performance Max asset group.
-public struct CreateGoogleAssetGroupRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var campaignId: String
-  public var name: String
-  public var finalUrls: [String]
-  /// `active` or `paused`; starts paused when left out.
-  public var status: String?
-
-  public init(
-    scope: GoogleAdsScope, campaignId: String, name: String, finalUrls: [String],
-    status: String? = nil
-  ) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.campaignId = campaignId
-    self.name = name
-    self.finalUrls = finalUrls
-    self.status = status
-  }
-}
-
-/// Rename, pause, or resume an asset group.
-public struct UpdateGoogleAssetGroupRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  public var name: String?
-  public var status: String?
-
-  public init(scope: GoogleAdsScope, name: String? = nil, status: String? = nil) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.name = name
-    self.status = status
   }
 }
 
@@ -648,85 +302,5 @@ public struct GoogleQueryRequest: Codable, Sendable {
     self.connectionId = scope.connectionId
     self.customerId = scope.customerId
     self.query = query
-  }
-}
-
-/// The scope alone, for a delete that carries it in the body.
-public struct GoogleAdsScopeRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-
-  public init(scope: GoogleAdsScope) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-  }
-}
-
-/// What Google projects applying a recommendation would change. A `nil` field
-/// is one Google does not estimate for that recommendation.
-public struct GoogleRecommendationImpact: Codable, Sendable, Hashable {
-  public let baseClicks: Double?
-  public let potentialClicks: Double?
-  /// The account's currency, in minor units.
-  public let baseCostMinor: Int?
-  public let potentialCostMinor: Int?
-  public let baseConversions: Double?
-  public let potentialConversions: Double?
-}
-
-/// One of Google's own recommendations for the account.
-///
-/// ``id`` is the Google resource name rather than the `~` form other objects
-/// use, because a recommendation is not an object you address again: it is what
-/// apply and dismiss take.
-public struct GoogleRecommendation: Codable, Sendable, Hashable {
-  public let id: String
-  public let type: String?
-  public let campaignId: String?
-  public let adGroupId: String?
-  public let dismissed: Bool?
-  public let impact: GoogleRecommendationImpact?
-}
-
-/// One campaign's optimization score.
-public struct GoogleOptimizationScoreCampaign: Codable, Sendable, Hashable {
-  public let id: String
-  public let name: String?
-  public let score: Double?
-}
-
-/// Google's estimate of how well the account is set up, from 0 to 1.
-public struct GoogleOptimizationScore: Codable, Sendable, Hashable {
-  public let score: Double?
-  /// How much this account's score counts against others under the same manager.
-  public let weight: Double?
-  public let campaigns: [GoogleOptimizationScoreCampaign]?
-}
-
-/// How many recommendations an apply accepted.
-public struct GoogleApplied: Codable, Sendable, Hashable {
-  public let applied: Int?
-}
-
-/// How many recommendations a dismiss hid.
-public struct GoogleDismissed: Codable, Sendable, Hashable {
-  public let dismissed: Int?
-}
-
-/// Apply or dismiss recommendations on one account.
-public struct GoogleRecommendationsRequest: Codable, Sendable {
-  public var workspaceId: String
-  public var connectionId: String
-  public var customerId: String
-  /// Google resource names, each on `customerId`.
-  public var ids: [String]
-
-  public init(scope: GoogleAdsScope, ids: [String]) {
-    self.workspaceId = scope.workspaceId ?? ""
-    self.connectionId = scope.connectionId
-    self.customerId = scope.customerId
-    self.ids = ids
   }
 }
