@@ -118,8 +118,8 @@ public final class FoPostClient: Sendable {
   /// Boosts, ads, audiences, and lead forms on a Meta Ads connection.
   public var ads: AdsResource { AdsResource(transport: transport) }
 
-  /// Google Ads only: keywords, assets, conversions, and raw GAQL. Campaigns,
-  /// ad groups, ads, audiences, and insights are on ``ads``.
+  /// Google Ads only: bid strategies, ad schedules, Local Services leads,
+  /// conversions, and raw GAQL. Ads, audiences, and insights are on ``ads``.
   public var googleAds: GoogleAdsResource { GoogleAdsResource(transport: transport) }
   /// Content, length, and media checks that create nothing.
   public var validate: ValidateResource { ValidateResource(transport: transport) }
